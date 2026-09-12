@@ -1,0 +1,15 @@
+.page { min-height: 100vh; background: var(--bg); }
+.nav { min-height: 78px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.shell { width: min(1100px, calc(100% - 32px)); margin: 0 auto; padding: 90px 0; }
+.card { width: min(520px, 100%); margin: 16vh auto 0; padding: 40px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 25px 80px rgba(34,30,21,.08); display: grid; gap: 18px; }
+.card h1 { margin: 0; font-size: 44px; letter-spacing: -.055em; line-height: 1; }
+.card p { margin: 0; color: var(--muted); line-height: 1.6; }
+.icon { width: 58px; height: 58px; object-fit: contain; }
+.heading { font-size: clamp(56px, 7vw, 86px); line-height: .92; letter-spacing: -.065em; margin: 12px 0 18px; }
+.sub { max-width: 650px; color: var(--muted); font-size: 18px; line-height: 1.6; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 52px; }
+.tile { padding: 26px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; min-height: 210px; }
+.tile > span { font: 500 11px 'DM Mono', monospace; color: var(--muted); }
+.tile h2 { margin: 38px 0 8px; font-size: 22px; letter-spacing: -.03em; }
+.tile p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
+@media (max-width: 760px) { .shell { padding: 60px 0; } .grid { grid-template-columns: 1fr; } .card { margin-top: 10vh; padding: 28px; } .nav { padding: 0 16px; } }
