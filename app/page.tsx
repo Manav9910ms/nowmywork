@@ -28,7 +28,7 @@ export default function Home() {
     <main>
       <nav className="nav shell">
         <a className="brand" href="#top" aria-label="NowMyWork home">
-          <span className="brand-mark">N</span>
+          <img src="/icon.png" alt="" className="brand-logo" />
           <span>NowMyWork</span>
         </a>
         <div className="nav-links">
@@ -133,6 +133,9 @@ export default function Home() {
       </section>
 
       <section id="start" className="cta shell">
+        <div className="cta-brand">
+          <img src="/logo.png" alt="NowMyWork" className="cta-logo" />
+        </div>
         <div>
           <div className="eyebrow">COMING TO LIFE</div>
           <h2>Post work. Get matched. Get moving.</h2>
