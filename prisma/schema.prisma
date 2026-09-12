@@ -54,7 +54,6 @@ model User {
   freelancer    Freelancer?
   clientJobs    Job[]        @relation("ClientJobs")
   assignedJobs  Job[]        @relation("AssignedJobs")
-  offers        JobOffer[]
 }
 
 model Freelancer {
