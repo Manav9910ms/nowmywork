@@ -8,6 +8,7 @@ import {
   sendEmailVerification,
   signOut,
   updateProfile,
+  type User,
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -41,4 +42,25 @@ export async function signInWithGoogle() {
 
 export async function logOut() {
   await signOut(auth);
+}
+
+export async function syncAccount(user: User, role?: 'CLIENT' | 'FREELANCER') {
+  const idToken = await user.getIdToken();
+  const response = await fetch('/api/auth/sync', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(role ? { role } : {}),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error ?? 'Unable to sync your account.');
+  }
+
+  return (await response.json()) as {
+    user: { id: string; firebaseUid: string; email: string; name: string; role: 'CLIENT' | 'FREELANCER' | 'ADMIN' };
+  };
 }
