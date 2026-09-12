@@ -31,6 +31,7 @@ export default function AuthCard({ mode }: Props) {
   const [role, setRole] = useState<'CLIENT' | 'FREELANCER'>('CLIENT');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const signup = mode === 'signup';
 
   async function finishAuth(account: Awaited<ReturnType<typeof signUpWithEmail>>, selectedRole?: 'CLIENT' | 'FREELANCER') {
     const synced = await syncAccount(account, selectedRole);
@@ -70,8 +71,6 @@ export default function AuthCard({ mode }: Props) {
       setBusy(false);
     }
   }
-
-  const signup = mode === 'signup';
 
   return (
     <div className="auth-card">
