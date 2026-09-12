@@ -11,13 +11,13 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "latest",
+    "@prisma/client": "6.19.3",
     "firebase": "latest",
     "firebase-admin": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "prisma": "latest"
+    "prisma": "6.19.3"
   },
   "devDependencies": {
     "@types/node": "latest",
