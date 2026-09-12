@@ -23,19 +23,40 @@ NowMyWork is a freelance marketplace built around matching instead of endless bi
 - Matching API preview endpoint
 - Job posting API foundation
 - Vercel-friendly Node.js API runtime
+- Firebase Authentication foundation
+- Email/password sign-up and sign-in
+- Google sign-in
+- Role selection during onboarding
+- Authenticated dashboard shell
+
+## Firebase setup
+
+1. Create or open a Firebase project.
+2. In Firebase Console, enable Authentication and turn on **Email/Password** and **Google** providers.
+3. Register a Web App in the Firebase project.
+4. Copy the web app configuration into the `NEXT_PUBLIC_FIREBASE_*` variables in `.env`.
+5. Add your local and deployed domains to Firebase Authentication's authorized domains.
+
+The client SDK handles browser authentication. Never put Firebase Admin credentials in `NEXT_PUBLIC_*` variables. Server-side token verification will be added when protected API routes are connected to authenticated users.
 
 ## Run locally
 
 ```bash
 npm install
 cp .env.example .env
-# Set DATABASE_URL in .env
+# Set DATABASE_URL and Firebase variables in .env
 npm run prisma:generate
 npm run prisma:migrate
 npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+## Auth routes
+
+- `/signup` — create an account and choose Client or Freelancer
+- `/signin` — email/password or Google sign-in
+- `/dashboard` — authenticated dashboard shell
 
 ## APIs
 
