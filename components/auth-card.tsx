@@ -2,16 +2,16 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/lib/auth';
+import { signInWithEmail, signInWithGoogle, signUpWithEmail, syncAccount } from '@/lib/auth';
 
 type Mode = 'signin' | 'signup';
+type Props = { mode: Mode };
 
-type Props = {
-  mode: Mode;
-};
+type AuthError = { code?: string; message?: string };
 
 function friendlyError(error: unknown) {
-  const code = (error as { code?: string })?.code ?? '';
+  const code = (error as AuthError)?.code ?? '';
+  const message = (error as AuthError)?.message ?? '';
   const messages: Record<string, string> = {
     'auth/invalid-credential': 'Email or password is incorrect.',
     'auth/email-already-in-use': 'An account already exists with this email.',
@@ -20,7 +20,7 @@ function friendlyError(error: unknown) {
     'auth/popup-closed-by-user': 'Google sign-in was closed before completion.',
     'auth/popup-blocked': 'Your browser blocked the sign-in popup. Please allow popups and try again.',
   };
-  return messages[code] ?? 'Something went wrong. Please try again.';
+  return messages[code] ?? message ?? 'Something went wrong. Please try again.';
 }
 
 export default function AuthCard({ mode }: Props) {
@@ -32,18 +32,23 @@ export default function AuthCard({ mode }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  async function finishAuth(account: Awaited<ReturnType<typeof signUpWithEmail>>, selectedRole?: 'CLIENT' | 'FREELANCER') {
+    const synced = await syncAccount(account, selectedRole);
+    window.localStorage.setItem('nowmywork_role', synced.user.role);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setBusy(true);
     try {
-      if (mode === 'signup') {
-        await signUpWithEmail(email.trim(), password, name.trim());
-        window.localStorage.setItem('nowmywork_role', role);
-      } else {
-        await signInWithEmail(email.trim(), password);
-      }
+      const account = mode === 'signup'
+        ? await signUpWithEmail(email.trim(), password, name.trim())
+        : await signInWithEmail(email.trim(), password);
+
+      await finishAuth(account, mode === 'signup' ? role : undefined);
       router.push('/dashboard');
+      router.refresh();
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -55,9 +60,10 @@ export default function AuthCard({ mode }: Props) {
     setError('');
     setBusy(true);
     try {
-      await signInWithGoogle();
-      window.localStorage.setItem('nowmywork_role', role);
+      const account = await signInWithGoogle();
+      await finishAuth(account, signup ? role : undefined);
       router.push('/dashboard');
+      router.refresh();
     } catch (err) {
       setError(friendlyError(err));
     } finally {
