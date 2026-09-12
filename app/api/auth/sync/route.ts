@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { adminAuth } from '@/lib/firebase-admin';
 import { prisma } from '@/lib/prisma';
 
@@ -13,6 +14,30 @@ function getBearerToken(request: Request, body: Body) {
   const authorization = request.headers.get('authorization');
   if (authorization?.startsWith('Bearer ')) return authorization.slice(7);
   return body.idToken;
+}
+
+function safeError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return `Database error ${error.code}.`;
+  }
+
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    return 'Database connection failed.';
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'FIREBASE_ADMIN_CONFIG_MISSING') {
+      return 'Firebase Admin configuration is missing.';
+    }
+    if (error.message.includes('private key')) {
+      return 'Firebase Admin private key is invalid.';
+    }
+    if (error.message.includes('credential')) {
+      return 'Firebase Admin credentials are invalid.';
+    }
+  }
+
+  return 'Unable to sync account.';
 }
 
 export async function POST(request: Request) {
@@ -60,6 +85,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Auth sync failed:', error);
-    return NextResponse.json({ error: 'Unable to sync account.' }, { status: 500 });
+    return NextResponse.json({ error: safeError(error) }, { status: 500 });
   }
 }
