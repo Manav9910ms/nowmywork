@@ -9,12 +9,12 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RequestBody;
 
-    if (!Array.isArray(body.freelancers)) {
-      return NextResponse.json({ error: 'freelancers must be an array' }, { status: 400 });
+    if (!Array.isArray(body.freelancers) || !Array.isArray(body.skills) || !Array.isArray(body.techStack)) {
+      return NextResponse.json({ error: 'Invalid matching payload' }, { status: 400 });
     }
 
-    if (!body.title && (!Array.isArray(body.skills) || !Array.isArray(body.techStack))) {
-      return NextResponse.json({ error: 'Invalid matching payload' }, { status: 400 });
+    if (!body.priority || typeof body.budget !== 'number' || typeof body.durationDays !== 'number') {
+      return NextResponse.json({ error: 'Missing job matching fields' }, { status: 400 });
     }
 
     const matches = selectTopFreelancers(body, body.freelancers, 10);
