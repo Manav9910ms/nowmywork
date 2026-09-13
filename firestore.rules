@@ -2,7 +2,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-<<<<<<< HEAD
     function signedIn() {
       return request.auth != null;
     }
@@ -51,8 +50,8 @@ service cloud.firestore {
         && (resource.data.clientId == request.auth.uid
           || resource.data.freelancerId == request.auth.uid);
       allow create: if signedIn()
-        && (resource.data.clientId == request.auth.uid
-          || resource.data.freelancerId == request.auth.uid);
+        && (request.resource.data.clientId == request.auth.uid
+          || request.resource.data.freelancerId == request.auth.uid);
       allow update: if signedIn()
         && (resource.data.clientId == request.auth.uid
           || resource.data.freelancerId == request.auth.uid);
@@ -60,10 +59,3 @@ service cloud.firestore {
     }
   }
 }
-=======
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
->>>>>>> 7059ed5 (Configure Firestore deployment)
