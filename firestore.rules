@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    match /users/{uid} {
+      allow create: if owns(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role in ['CLIENT', 'FREELANCER'];
+
+      allow read: if owns(uid);
+
+      allow update: if owns(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role;
+
+      allow delete: if false;
+    }
+
+    match /freelancers/{uid} {
+      allow read: if signedIn();
+      allow create, update: if owns(uid)
+        && userRole(uid) == 'FREELANCER'
+        && request.resource.data.userId == uid;
+      allow delete: if owns(uid);
+    }
+
+    match /jobs/{jobId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && userRole(request.auth.uid) == 'CLIENT'
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if signedIn()
+        && resource.data.clientId == request.auth.uid;
+    }
+
+    match /offers/{offerId} {
+      allow read: if signedIn()
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.freelancerId == request.auth.uid);
+      allow create: if signedIn()
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.freelancerId == request.auth.uid);
+      allow update: if signedIn()
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.freelancerId == request.auth.uid);
+      allow delete: if false;
+    }
+  }
+}
