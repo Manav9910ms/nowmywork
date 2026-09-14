@@ -1,0 +1,34 @@
+.section { margin-top: 16px; padding: 30px; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.header h2 { margin: 8px 0 10px; font-size: 30px; letter-spacing: -.045em; }
+.header p { max-width: 700px; margin: 0; color: var(--muted); line-height: 1.65; }
+.amount { text-align: right; font-size: 28px; font-weight: 800; letter-spacing: -.04em; white-space: nowrap; }
+.amount span { display: block; margin-top: 4px; color: var(--muted); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .07em; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+.card { padding: 20px; background: var(--bg); border: 1px solid var(--line); border-radius: 18px; display: grid; gap: 8px; }
+.label { color: var(--muted); font: 500 10px 'DM Mono', monospace; letter-spacing: .08em; }
+.fee { font-size: 27px; font-weight: 800; letter-spacing: -.04em; }
+.pending, .paid { width: fit-content; padding: 6px 9px; border-radius: 999px; font: 500 10px 'DM Mono', monospace; text-transform: uppercase; }
+.pending { border: 1px solid var(--line); }
+.paid { background: #eef7d7; border: 1px solid #d4e79f; }
+.payBox, .unlockBox { margin-top: 14px; padding: 20px; border: 1px dashed var(--line); border-radius: 18px; display: grid; gap: 14px; }
+.payBox > div:first-child { display: grid; gap: 5px; }
+.payBox span, .unlockBox p { color: var(--muted); line-height: 1.55; margin: 0; }
+.payActions { display: flex; gap: 10px; align-items: center; }
+.payActions input { flex: 1; min-width: 0; padding: 14px 15px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; outline: none; font: inherit; }
+.unlockBox { border-style: solid; background: #f7fbe9; }
+.unlockBox h3 { margin: 7px 0 6px; font-size: 26px; letter-spacing: -.04em; }
+.contacts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.contacts > div { padding: 16px; background: rgba(255,255,255,.5); border: 1px solid var(--line); border-radius: 14px; display: grid; gap: 5px; }
+.contacts > div > span { color: var(--muted); font: 500 10px 'DM Mono', monospace; letter-spacing: .08em; }
+.contacts strong { overflow-wrap: anywhere; }
+.contacts small { color: var(--muted); }
+.success, .error { margin-top: 18px; padding: 14px 16px; border-radius: 14px; font-size: 14px; }
+.success { background: #f3f9dd; border: 1px solid #d6e8a0; }
+.error { background: #fff0ee; border: 1px solid #efb5af; color: #9a362d; }
+@media (max-width: 760px) {
+  .header { display: grid; align-items: start; }
+  .amount { text-align: left; }
+  .grid, .contacts { grid-template-columns: 1fr; }
+  .payActions { display: grid; grid-template-columns: 1fr; }
+}
