@@ -54,8 +54,8 @@ export default function Home() {
         <span>Work finds you.</span>
         <a href="mailto:team@nowmywork.com">team@nowmywork.com</a>
         <span className="footer-socials">
-          <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="NowMyWork on YouTube">YouTube</a>
-          <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="NowMyWork on Instagram">Instagram</a>
+          <a href="https://www.youtube.com/@nowmywork" target="_blank" rel="noreferrer" aria-label="NowMyWork on YouTube">YouTube</a>
+          <a href="https://www.instagram.com/nowmywork" target="_blank" rel="noreferrer" aria-label="NowMyWork on Instagram">Instagram</a>
         </span>
       </footer>
     </main>
