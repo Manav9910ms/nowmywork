@@ -1,28 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, type DocumentData } from 'firebase/firestore';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { getJob, updateJobStatus, type JobRecord, type JobStatus } from '@/lib/jobs';
-import { getFreelancerProfile, type FreelancerProfile } from '@/lib/freelancer';
 import styles from './project.module.css';
 
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
-
-type ProjectUser = {
-  name?: string;
-  email?: string;
-  role?: AccountRole;
-};
+type FreelancerSummary = { displayName?: string; skills?: string[] };
 
 function formatDate(timestamp?: JobRecord['createdAt']) {
   const date = timestamp?.toDate();
-  return date
-    ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
-    : '—';
+  return date ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date) : '—';
 }
 
 function getDeadline(job: JobRecord) {
@@ -50,7 +42,7 @@ export default function ProjectPage() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AccountRole | null>(null);
   const [job, setJob] = useState<JobRecord | null>(null);
-  const [freelancer, setFreelancer] = useState<FreelancerProfile | null>(null);
+  const [freelancer, setFreelancer] = useState<FreelancerSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -68,8 +60,7 @@ export default function ProjectPage() {
 
       try {
         const account = await getDoc(doc(db, 'users', currentUser.uid));
-        const accountData = account.data() as ProjectUser | undefined;
-        setRole(accountData?.role ?? 'CLIENT');
+        setRole((account.data()?.role as AccountRole | undefined) ?? 'CLIENT');
 
         const loadedJob = await getJob(jobId);
         if (!loadedJob) {
@@ -88,8 +79,14 @@ export default function ProjectPage() {
 
         setJob(loadedJob);
         if (loadedJob.assignedToId) {
-          const profile = await getFreelancerProfile(loadedJob.assignedToId);
-          setFreelancer(profile);
+          const profileSnapshot = await getDoc(doc(db, 'freelancers', loadedJob.assignedToId));
+          if (profileSnapshot.exists()) {
+            const data = profileSnapshot.data() as DocumentData;
+            setFreelancer({
+              displayName: typeof data.displayName === 'string' ? data.displayName : undefined,
+              skills: Array.isArray(data.skills) ? data.skills : [],
+            });
+          }
         }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : 'We could not load this project.');
@@ -115,17 +112,11 @@ export default function ProjectPage() {
     }
   }
 
-  if (loading) {
-    return <main className={styles.page}><div className={styles.loading}>Loading project…</div></main>;
-  }
+  if (loading) return <main className={styles.page}><div className={styles.loading}>Loading project…</div></main>;
 
-  if (!user) {
-    return <main className={styles.page}><section className={styles.narrow}><div className="eyebrow muted">PROJECT ACCESS</div><h1>Sign in required.</h1><p>Sign in to open this project workspace.</p><Link href="/signin" className="primary-btn">Go to sign in →</Link></section></main>;
-  }
+  if (!user) return <main className={styles.page}><section className={styles.narrow}><div className="eyebrow muted">PROJECT ACCESS</div><h1>Sign in required.</h1><p>Sign in to open this project workspace.</p><Link href="/signin" className="primary-btn">Go to sign in →</Link></section></main>;
 
-  if (!job) {
-    return <main className={styles.page}><section className={styles.narrow}><div className="eyebrow muted">PROJECT NOT FOUND</div><h1>We couldn’t open this project.</h1><p>{error || 'The project may have been removed or you may not have access.'}</p><button className="secondary-btn" onClick={() => router.push('/dashboard')}>Back to dashboard</button></section></main>;
-  }
+  if (!job) return <main className={styles.page}><section className={styles.narrow}><div className="eyebrow muted">PROJECT NOT FOUND</div><h1>We couldn’t open this project.</h1><p>{error || 'The project may have been removed or you may not have access.'}</p><button className="secondary-btn" onClick={() => router.push('/dashboard')}>Back to dashboard</button></section></main>;
 
   const canStart = job.status === 'ASSIGNED';
   const canComplete = job.status === 'IN_PROGRESS';
@@ -140,7 +131,6 @@ export default function ProjectPage() {
 
       <section className={styles.shell}>
         <Link href="/dashboard" className={styles.back}>← Back to dashboard</Link>
-
         {message && <div className={styles.success} role="status">{message}</div>}
         {error && <div className={styles.error} role="alert">{error}</div>}
 
@@ -183,16 +173,8 @@ export default function ProjectPage() {
             <h2>Project connection.</h2>
           </div>
           <div className={styles.personGrid}>
-            <div className={styles.person}>
-              <span>CLIENT</span>
-              <strong>{role === 'CLIENT' ? (user.displayName || 'You') : 'Project client'}</strong>
-              {role === 'CLIENT' && <small>{user.email}</small>}
-            </div>
-            <div className={styles.person}>
-              <span>FREELANCER</span>
-              <strong>{freelancer?.displayName || (job.assignedToId === user.uid ? (user.displayName || 'You') : 'Assigned freelancer')}</strong>
-              {freelancer && <small>{freelancer.skills.slice(0, 3).join(' · ')}</small>}
-            </div>
+            <div className={styles.person}><span>CLIENT</span><strong>{role === 'CLIENT' ? (user.displayName || 'You') : 'Project client'}</strong>{role === 'CLIENT' && <small>{user.email}</small>}</div>
+            <div className={styles.person}><span>FREELANCER</span><strong>{freelancer?.displayName || (job.assignedToId === user.uid ? (user.displayName || 'You') : 'Assigned freelancer')}</strong>{freelancer?.skills && <small>{freelancer.skills.slice(0, 3).join(' · ')}</small>}</div>
           </div>
         </section>
 
