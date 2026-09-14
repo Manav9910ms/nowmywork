@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { createPrivateOffers } from '@/lib/offers';
 import { selectTopFreelancers, type ScoredCandidate, type FreelancerCandidate, type JobForMatching } from '@/lib/matching';
 import type { JobRecord } from '@/lib/jobs';
 import styles from './client-dashboard.module.css';
@@ -18,12 +19,16 @@ type CandidateDoc = ScoredCandidate & {
 export default function MatchResults({ job }: Props) {
   const [matches, setMatches] = useState<CandidateDoc[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [offersSent, setOffersSent] = useState(job.status === 'OFFERED');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   async function findMatches() {
     setLoading(true);
     setError('');
+    setMessage('');
     try {
       const snapshot = await getDocs(query(collection(db, 'freelancers'), where('availability', '!=', 'BUSY')));
       const candidates = snapshot.docs
@@ -55,6 +60,22 @@ export default function MatchResults({ job }: Props) {
     }
   }
 
+  async function sendOffers() {
+    if (matches.length === 0) return;
+    setSending(true);
+    setError('');
+    setMessage('');
+    try {
+      await createPrivateOffers(job, matches);
+      setOffersSent(true);
+      setMessage(`${matches.length} private ${matches.length === 1 ? 'offer has' : 'offers have'} been sent.`);
+    } catch {
+      setError('We could not send the private offers. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className={styles.matchPanel}>
       <div className={styles.matchHeader}>
@@ -62,12 +83,20 @@ export default function MatchResults({ job }: Props) {
           <div className="eyebrow muted">PRIVATE MATCHING</div>
           <h4>Top matches for this project</h4>
         </div>
-        <button className="secondary-btn" type="button" onClick={findMatches} disabled={loading}>
-          {loading ? 'Matching…' : loaded ? 'Refresh matches' : 'Find top 10 →'}
-        </button>
+        <div className={styles.matchActions}>
+          <button className="secondary-btn" type="button" onClick={findMatches} disabled={loading || sending}>
+            {loading ? 'Matching…' : loaded ? 'Refresh matches' : 'Find top 10 →'}
+          </button>
+          {loaded && matches.length > 0 && (
+            <button className="primary-btn" type="button" onClick={sendOffers} disabled={sending || offersSent}>
+              {sending ? 'Sending…' : offersSent ? 'Offers sent ✓' : `Send ${matches.length} private ${matches.length === 1 ? 'offer' : 'offers'} →`}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className={styles.error} role="alert">{error}</div>}
+      {message && <div className={styles.success} role="status">{message}</div>}
 
       {loaded && matches.length === 0 && (
         <div className={styles.matchEmpty}>
