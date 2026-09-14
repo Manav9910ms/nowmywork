@@ -2,6 +2,7 @@
 .topRow { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
 .heading { max-width: 760px; margin: 12px 0 18px; font-size: clamp(48px, 6vw, 78px); line-height: .94; letter-spacing: -.06em; }
 .sub { max-width: 690px; color: var(--muted); font-size: 18px; line-height: 1.6; margin: 0; }
+.profileBadge { max-width: 230px; border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; background: #f2efe7; color: var(--muted); font: 500 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .07em; text-align: center; }
 .success, .error { margin-top: 26px; padding: 13px 15px; border-radius: 13px; font-size: 13px; line-height: 1.5; }
 .success { border: 1px solid #c9ddb0; background: #f4fbe8; color: #36520c; }
 .error { border: 1px solid #e0b7b0; background: #fff2ef; color: #8a3027; }
@@ -46,6 +47,7 @@
   .shell { padding: 54px 0 70px; }
   .topRow { align-items: flex-start; flex-direction: column; }
   .topRow > button { width: 100%; }
+  .profileBadge { max-width: 100%; }
   .formCard { padding: 22px; }
   .formIntro { flex-direction: column; }
   .twoCol, .priorityGrid { grid-template-columns: 1fr; }
