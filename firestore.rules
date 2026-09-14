@@ -14,12 +14,6 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid)).data.role;
     }
 
-    function isProjectParticipant(jobId) {
-      return signedIn()
-        && (get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid
-          || get(/databases/$(database)/documents/jobs/$(jobId)).data.assignedToId == request.auth.uid);
-    }
-
     match /users/{uid} {
       allow create: if owns(uid)
         && request.resource.data.uid == uid
@@ -118,17 +112,24 @@ service cloud.firestore {
     }
 
     match /paymentSessions/{jobId} {
-      allow read: if isProjectParticipant(jobId);
+      allow read: if signedIn()
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.freelancerId == request.auth.uid);
       allow write: if false;
     }
 
     match /paymentParties/{partyId} {
-      allow read: if signedIn() && resource.data.uid == request.auth.uid;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     match /contactUnlocks/{jobId} {
-      allow read: if isProjectParticipant(jobId);
+      allow read: if signedIn()
+        && (resource.data.client.email != null
+          || resource.data.client.phone != null)
+        && (resource.data.freelancer.email != null
+          || resource.data.freelancer.phone != null)
+        && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
+          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
       allow write: if false;
     }
   }
