@@ -14,6 +14,7 @@
 .payBox, .unlockBox { margin-top: 14px; padding: 20px; border: 1px dashed var(--line); border-radius: 18px; display: grid; gap: 14px; }
 .payBox > div:first-child { display: grid; gap: 5px; }
 .payBox span, .unlockBox p { color: var(--muted); line-height: 1.55; margin: 0; }
+.refundNote { display: block; margin-top: 8px; color: var(--muted); line-height: 1.55; font-size: 13px; }
 .payActions { display: flex; gap: 10px; align-items: center; }
 .payActions input { flex: 1; min-width: 0; padding: 14px 15px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; outline: none; font: inherit; }
 .unlockBox { border-style: solid; background: #f7fbe9; }
