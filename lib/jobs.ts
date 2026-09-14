@@ -63,6 +63,14 @@ export async function getJob(jobId: string): Promise<JobRecord | null> {
 }
 
 export async function updateJobStatus(jobId: string, status: JobStatus) {
+  if (status === 'IN_PROGRESS') {
+    const session = await getDoc(doc(db, 'paymentSessions', jobId));
+    const clientPaymentStatus = session.data()?.clientPaymentStatus;
+    if (clientPaymentStatus !== 'PAID') {
+      throw new Error('The client must complete the 5% platform fee before the project can start.');
+    }
+  }
+
   await updateDoc(doc(db, 'jobs', jobId), {
     status,
     updatedAt: serverTimestamp(),
