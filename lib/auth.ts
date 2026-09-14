@@ -52,11 +52,12 @@ export async function syncAccount(user: User, role?: AccountRole) {
   const existing = await getDoc(userRef);
   const existingRole = existing.exists() ? (existing.data().role as AccountRole | undefined) : undefined;
   const resolvedRole: AccountRole = existingRole ?? role ?? 'CLIENT';
+  const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'NowMyWork User';
 
   const userData = {
     uid: user.uid,
     email: user.email?.trim().toLowerCase() ?? '',
-    name: user.displayName?.trim() || user.email?.split('@')[0] || 'NowMyWork User',
+    name: displayName,
     role: resolvedRole,
     updatedAt: serverTimestamp(),
     ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
@@ -69,6 +70,7 @@ export async function syncAccount(user: User, role?: AccountRole) {
       doc(db, 'freelancers', user.uid),
       {
         userId: user.uid,
+        displayName,
         bio: '',
         hourlyRate: null,
         experience: 0,
