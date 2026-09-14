@@ -55,6 +55,36 @@ service cloud.firestore {
         && request.resource.data.status == 'ASSIGNED'
         && request.resource.data.assignedToId == request.auth.uid
         && getAfter(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)).data.status == 'ACCEPTED';
+
+      allow update: if signedIn()
+        && resource.data.assignedToId == request.auth.uid
+        && request.resource.data.clientId == resource.data.clientId
+        && request.resource.data.assignedToId == resource.data.assignedToId
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.budget == resource.data.budget
+        && request.resource.data.currency == resource.data.currency
+        && request.resource.data.durationDays == resource.data.durationDays
+        && request.resource.data.priority == resource.data.priority
+        && request.resource.data.skills == resource.data.skills
+        && request.resource.data.techStack == resource.data.techStack
+        && resource.data.status == 'ASSIGNED'
+        && request.resource.data.status == 'IN_PROGRESS';
+
+      allow update: if signedIn()
+        && resource.data.assignedToId == request.auth.uid
+        && request.resource.data.clientId == resource.data.clientId
+        && request.resource.data.assignedToId == resource.data.assignedToId
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.budget == resource.data.budget
+        && request.resource.data.currency == resource.data.currency
+        && request.resource.data.durationDays == resource.data.durationDays
+        && request.resource.data.priority == resource.data.priority
+        && request.resource.data.skills == resource.data.skills
+        && request.resource.data.techStack == resource.data.techStack
+        && resource.data.status == 'IN_PROGRESS'
+        && request.resource.data.status == 'COMPLETED';
     }
 
     match /offers/{offerId} {
