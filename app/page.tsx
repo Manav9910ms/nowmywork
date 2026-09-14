@@ -49,7 +49,15 @@ export default function Home() {
 
       <section id="start" className="cta shell"><div className="cta-brand"><img src={brandLogo} alt="NowMyWork" className="cta-logo" /></div><div><div className="eyebrow">COMING TO LIFE</div><h2>Post work. Get matched. Get moving.</h2><p>NowMyWork is being built around a faster path from “I need help” to “the right person has it.”</p></div><div className="cta-actions"><Link className="primary-btn light" href="/signup">Post a project <span>→</span></Link><Link className="secondary-btn light-outline" href="/signup">Join as a freelancer</Link></div></section>
 
-      <footer className="footer shell"><span>© {new Date().getFullYear()} NowMyWork</span><span>Work finds you.</span></footer>
+      <footer className="footer shell">
+        <span>© {new Date().getFullYear()} NowMyWork</span>
+        <span>Work finds you.</span>
+        <a href="mailto:team@nowmywork.com">team@nowmywork.com</a>
+        <span className="footer-socials">
+          <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="NowMyWork on YouTube">YouTube</a>
+          <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="NowMyWork on Instagram">Instagram</a>
+        </span>
+      </footer>
     </main>
   );
 }
