@@ -114,7 +114,7 @@ export default function ProjectPage() {
         {role && (role === 'CLIENT' || role === 'FREELANCER') && ['ASSIGNED', 'IN_PROGRESS'].includes(job.status) && <PaymentGate job={job} role={role} />}
 
         <section className={styles.peopleCard}><div><div className="eyebrow muted">PEOPLE</div><h2>Project connection.</h2></div><div className={styles.personGrid}><div className={styles.person}><span>CLIENT</span><strong>{role === 'CLIENT' ? (user.displayName || 'You') : 'Project client'}</strong>{role === 'CLIENT' && <small>{user.email}</small>}</div><div className={styles.person}><span>FREELANCER</span><strong>{freelancer?.displayName || (job.assignedToId === user.uid ? (user.displayName || 'You') : 'Assigned freelancer')}</strong>{freelancer?.skills && <small>{freelancer.skills.slice(0, 3).join(' · ')}</small>}</div></div></section>
-        <div className={styles.notice}><strong>Communication rule:</strong> direct contact details stay locked until both sides complete their verified NowMyWork platform fee.</div>
+        <div className={styles.notice}><strong>Communication rule:</strong> direct contact details stay locked until the client completes the 5% NowMyWork platform fee. The freelancer pays no upfront platform fee; a 10% fee is deducted from the freelancer’s payout after completion.</div>
       </section>
     </main>
   );
