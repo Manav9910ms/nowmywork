@@ -37,7 +37,7 @@ service cloud.firestore {
     }
 
     match /jobs/{jobId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && resource.data.clientId == request.auth.uid;
       allow create: if signedIn()
         && userRole(request.auth.uid) == 'CLIENT'
         && request.resource.data.clientId == request.auth.uid;
