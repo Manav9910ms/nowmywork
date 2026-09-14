@@ -69,7 +69,8 @@ service cloud.firestore {
         && request.resource.data.skills == resource.data.skills
         && request.resource.data.techStack == resource.data.techStack
         && resource.data.status == 'ASSIGNED'
-        && request.resource.data.status == 'IN_PROGRESS';
+        && request.resource.data.status == 'IN_PROGRESS'
+        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
 
       allow update: if signedIn()
         && resource.data.assignedToId == request.auth.uid
@@ -124,12 +125,9 @@ service cloud.firestore {
 
     match /contactUnlocks/{jobId} {
       allow read: if signedIn()
-        && (resource.data.client.email != null
-          || resource.data.client.phone != null)
-        && (resource.data.freelancer.email != null
-          || resource.data.freelancer.phone != null)
         && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
-          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
+          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId)
+        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
       allow write: if false;
     }
   }
