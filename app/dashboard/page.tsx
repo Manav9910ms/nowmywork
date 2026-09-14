@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { logOut } from '@/lib/auth';
 import ClientDashboard from '@/components/client-dashboard';
 import FreelancerProfile from '@/components/freelancer-profile';
+import FreelancerOffers from '@/components/freelancer-offers';
 import styles from './dashboard.module.css';
 
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
@@ -53,7 +54,12 @@ export default function DashboardPage() {
         <button className="ghost-btn" onClick={logout}>Sign out</button>
       </header>
 
-      {role === 'CLIENT' ? <ClientDashboard user={user} /> : role === 'FREELANCER' ? <FreelancerProfile user={user} /> : (
+      {role === 'CLIENT' ? <ClientDashboard user={user} /> : role === 'FREELANCER' ? (
+        <>
+          <FreelancerProfile user={user} />
+          <FreelancerOffers freelancerId={user.uid} />
+        </>
+      ) : (
         <section className={styles.shell}>
           <div className="eyebrow muted">ADMIN WORKSPACE</div>
           <h1 className={styles.heading}>Welcome{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.</h1>
