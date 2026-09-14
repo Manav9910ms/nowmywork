@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import styles from './freelancer-offers.module.css';
 import { getFreelancerOffers, respondToOffer, type JobOffer } from '@/lib/offers';
 
@@ -68,36 +69,21 @@ export default function FreelancerOffers({ freelancerId }: Props) {
       {loading ? (
         <div className={styles.empty}>Loading your opportunities…</div>
       ) : offers.length === 0 ? (
-        <div className={styles.empty}>
-          <strong>No private opportunities yet.</strong>
-          <p>Keep your skills and availability updated. New matching work will appear here.</p>
-        </div>
+        <div className={styles.empty}><strong>No private opportunities yet.</strong><p>Keep your skills and availability updated. New matching work will appear here.</p></div>
       ) : (
         <div className={styles.list}>
           {offers.map((offer) => (
             <article key={offer.id} className={styles.card}>
               <div className={styles.cardTop}>
-                <div>
-                  <span className={styles.status}>{offer.status}</span>
-                  <h3>{offer.title}</h3>
-                </div>
+                <div><span className={styles.status}>{offer.status}</span><h3>{offer.title}</h3></div>
                 <div className={styles.score}><strong>{offer.score.toFixed(0)}</strong><span>match</span></div>
               </div>
               <p className={styles.description}>{offer.description}</p>
-              <div className={styles.meta}>
-                <span>₹{offer.budget.toLocaleString('en-IN')}</span>
-                <span>{offer.durationDays} days</span>
-                <span>{offer.skills.slice(0, 3).join(' · ')}</span>
-              </div>
+              <div className={styles.meta}><span>₹{offer.budget.toLocaleString('en-IN')}</span><span>{offer.durationDays} days</span><span>{offer.skills.slice(0, 3).join(' · ')}</span></div>
               <div className={styles.bottom}>
                 <span>Offer expires {formatExpiry(offer)}</span>
-                {offer.status === 'PENDING' && (
-                  <div className={styles.actions}>
-                    <button className="secondary-btn" type="button" disabled={busyId === offer.id} onClick={() => respond(offer, 'DECLINED')}>Decline</button>
-                    <button className="primary-btn" type="button" disabled={busyId === offer.id} onClick={() => respond(offer, 'ACCEPTED')}>{busyId === offer.id ? 'Updating…' : 'Accept project →'}</button>
-                  </div>
-                )}
-                {offer.status === 'ACCEPTED' && <strong className={styles.accepted}>Assigned to you ✓</strong>}
+                {offer.status === 'PENDING' && <div className={styles.actions}><button className="secondary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'DECLINED')}>Decline</button><button className="primary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'ACCEPTED')}>{busyId === offer.id ? 'Updating…' : 'Accept project →'}</button></div>}
+                {offer.status === 'ACCEPTED' && <div className={styles.actions}><strong className={styles.accepted}>Assigned to you ✓</strong><Link href={`/project/${offer.jobId}`} className="secondary-btn">Open project →</Link></div>}
               </div>
             </article>
           ))}
