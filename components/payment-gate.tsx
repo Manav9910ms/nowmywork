@@ -58,6 +58,7 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'paymentSessions', job.id), (snapshot) => {
       setSession(snapshot.exists() ? (snapshot.data() as PaymentSession) : null);
+      setError('');
     }, () => setError('We could not read payment status.'));
     return unsubscribe;
   }, [job.id]);
@@ -75,6 +76,7 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
   const finalAmount = session?.finalAmount ?? job.budget;
   const clientFee = session?.clientFee ?? Math.max(1, Math.round(job.budget * 0.05));
   const freelancerFee = session?.freelancerFee ?? Math.max(1, Math.round(job.budget * 0.10));
+  const freelancerReceives = Math.max(0, finalAmount - freelancerFee);
   const clientPaid = session?.clientPaymentStatus === 'PAID';
   const unlocked = Boolean(session?.contactsUnlocked && contacts);
 
@@ -161,20 +163,37 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
       {message && <div className={styles.success} role="status">{message}</div>}
       {error && <div className={styles.error} role="alert">{error}</div>}
 
-      <div className={styles.grid}>
-        <article className={styles.card}>
-          <span className={styles.label}>CLIENT</span>
-          <strong>5% platform fee · paid upfront</strong>
-          <div className={styles.fee}>₹{clientFee.toLocaleString('en-IN')}</div>
-          <span className={clientPaid ? styles.paid : styles.pending}>{clientPaid ? 'Verified' : 'Pending'}</span>
-        </article>
-        <article className={styles.card}>
-          <span className={styles.label}>FREELANCER</span>
-          <strong>10% fee · deducted from payout</strong>
-          <div className={styles.fee}>₹{freelancerFee.toLocaleString('en-IN')}</div>
-          <span className={styles.pending}>No upfront payment</span>
-        </article>
-      </div>
+      {role === 'CLIENT' ? (
+        <div className={styles.grid}>
+          <article className={styles.card}>
+            <span className={styles.label}>YOUR FEE</span>
+            <strong>5% platform fee · paid upfront</strong>
+            <div className={styles.fee}>₹{clientFee.toLocaleString('en-IN')}</div>
+            <span className={clientPaid ? styles.paid : styles.pending}>{clientPaid ? 'Verified' : 'Pending'}</span>
+          </article>
+          <article className={styles.card}>
+            <span className={styles.label}>FREELANCER</span>
+            <strong>Project amount you pay</strong>
+            <div className={styles.fee}>₹{finalAmount.toLocaleString('en-IN')}</div>
+            <span>10% NowMyWork fee is deducted from the freelancer payout later: ₹{freelancerFee.toLocaleString('en-IN')}.</span>
+          </article>
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          <article className={styles.card}>
+            <span className={styles.label}>CLIENT PAYMENT</span>
+            <strong>Client accepted & paid 5%</strong>
+            <div className={styles.fee}>{clientPaid ? 'Verified' : 'Pending'}</div>
+            <span>{clientPaid ? 'The upfront NowMyWork fee is verified. You can proceed with the project.' : 'Waiting for the client to complete the 5% NowMyWork upfront fee.'}</span>
+          </article>
+          <article className={styles.card}>
+            <span className={styles.label}>YOUR PAYOUT</span>
+            <strong>Project amount</strong>
+            <div className={styles.fee}>₹{finalAmount.toLocaleString('en-IN')}</div>
+            <span>10% NowMyWork fee: ₹{freelancerFee.toLocaleString('en-IN')} · you receive ₹{freelancerReceives.toLocaleString('en-IN')} after completion.</span>
+          </article>
+        </div>
+      )}
 
       {!unlocked ? (
         <div className={styles.payBox}>
@@ -187,8 +206,8 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
               </>
             ) : (
               <>
-                <strong>Freelancer fee is deducted later.</strong>
-                <span>You pay ₹0 upfront. The 10% platform fee is deducted from your payout when the completed project is released.</span>
+                <strong>{clientPaid ? 'Client payment verified.' : 'Waiting for client payment.'}</strong>
+                <span>You pay ₹0 upfront. Once the client’s 5% fee is verified, direct contact details unlock and you can proceed.</span>
               </>
             )}
           </div>
