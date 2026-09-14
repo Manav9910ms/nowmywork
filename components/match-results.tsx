@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { selectTopFreelancers, type FreelancerCandidate, type JobForMatching } from '@/lib/matching';
+import { selectTopFreelancers, type ScoredCandidate, type FreelancerCandidate, type JobForMatching } from '@/lib/matching';
 import type { JobRecord } from '@/lib/jobs';
 import styles from './client-dashboard.module.css';
 
@@ -11,7 +11,7 @@ type Props = {
   job: JobRecord;
 };
 
-type CandidateDoc = FreelancerCandidate & {
+type CandidateDoc = ScoredCandidate & {
   displayName?: string;
 };
 
@@ -27,7 +27,7 @@ export default function MatchResults({ job }: Props) {
     try {
       const snapshot = await getDocs(query(collection(db, 'freelancers'), where('availability', '!=', 'BUSY')));
       const candidates = snapshot.docs
-        .map((item) => ({ id: item.id, ...item.data() }) as CandidateDoc)
+        .map((item) => ({ id: item.id, ...item.data() }) as FreelancerCandidate)
         .filter((candidate) => candidate.id !== job.clientId);
 
       const selected = selectTopFreelancers(
@@ -42,7 +42,11 @@ export default function MatchResults({ job }: Props) {
         10,
       );
 
-      setMatches(selected);
+      const names = new Map(
+        snapshot.docs.map((item) => [item.id, item.data().displayName as string | undefined]),
+      );
+
+      setMatches(selected.map((candidate) => ({ ...candidate, displayName: names.get(candidate.id) })));
       setLoaded(true);
     } catch {
       setError('We could not calculate matches right now. Please try again.');
