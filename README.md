@@ -44,12 +44,16 @@ Never put service-account private keys in `NEXT_PUBLIC_*` variables. This projec
 
 The repository contains `firestore.rules` with ownership and role checks for these collections.
 
+## Payments
+
+Razorpay Test Mode is used for the current payment-gate MVP. The server creates and verifies Razorpay orders while secret credentials remain server-side. The current flow records a 5% NowMyWork platform fee for each side of an assigned project and unlocks direct contacts only after both fees are verified. Live marketplace settlement should use the appropriate Razorpay marketplace/transfer product before production launch.
+
 ## Run locally
 
 ```bash
 npm install
 cp .env.example .env.local
-# Set the NEXT_PUBLIC_FIREBASE_* variables
+# Set the NEXT_PUBLIC_FIREBASE_* and Razorpay server variables
 npm run dev
 ```
 
@@ -76,4 +80,4 @@ Firestore Rules are part of the repository in `firestore.rules`. Publish them to
 
 ## Deployment
 
-The application is designed for deployment on Vercel. Firebase provides authentication and Firestore data storage; Vercel only needs the public Firebase Web App environment variables.
+The application is designed for deployment on Vercel. Firebase provides authentication and Firestore data storage; Vercel needs the public Firebase Web App environment variables plus the server-side Razorpay test credentials used by the payment API.
