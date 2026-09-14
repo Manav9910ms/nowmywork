@@ -11,6 +11,8 @@ import FreelancerProfile from '@/components/freelancer-profile';
 import FreelancerOffers from '@/components/freelancer-offers';
 import styles from './dashboard.module.css';
 
+const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
+
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
 
 export default function DashboardPage() {
@@ -45,12 +47,12 @@ export default function DashboardPage() {
 
   if (checking) return <main className={styles.page}><div className={styles.card}><p>Loading your workspace…</p></div></main>;
 
-  if (!user) return <main className={styles.page}><div className={styles.card}><img src="/icon.png" alt="" className={styles.icon} /><h1>Sign in required.</h1><p>You need a NowMyWork account to access the dashboard.</p><Link className="primary-btn" href="/signin">Go to sign in →</Link></div></main>;
+  if (!user) return <main className={styles.page}><div className={styles.card}><img src={brandIcon} alt="" className={styles.icon} /><h1>Sign in required.</h1><p>You need a NowMyWork account to access the dashboard.</p><Link className="primary-btn" href="/signin">Go to sign in →</Link></div></main>;
 
   return (
     <main className={styles.page}>
       <header className={styles.nav}>
-        <Link href="/" className="brand"><img src="/icon.png" alt="" className="brand-logo" /><span>NowMyWork</span></Link>
+        <Link href="/" className="brand"><img src={brandIcon} alt="" className="brand-logo" /><span>NowMyWork</span></Link>
         <button className="ghost-btn" onClick={logout}>Sign out</button>
       </header>
 
