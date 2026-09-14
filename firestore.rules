@@ -18,13 +18,10 @@ service cloud.firestore {
       allow create: if owns(uid)
         && request.resource.data.uid == uid
         && request.resource.data.role in ['CLIENT', 'FREELANCER'];
-
       allow read: if owns(uid);
-
       allow update: if owns(uid)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.role == resource.data.role;
-
       allow delete: if false;
     }
 
@@ -42,20 +39,16 @@ service cloud.firestore {
           || (resource.data.assignedToId == request.auth.uid
             && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'])
           || exists(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)));
-
       allow create: if signedIn()
         && userRole(request.auth.uid) == 'CLIENT'
         && request.resource.data.clientId == request.auth.uid;
-
       allow update, delete: if signedIn()
         && resource.data.clientId == request.auth.uid;
-
       allow update: if signedIn()
         && resource.data.status in ['OPEN', 'OFFERED']
         && request.resource.data.status == 'ASSIGNED'
         && request.resource.data.assignedToId == request.auth.uid
         && getAfter(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)).data.status == 'ACCEPTED';
-
       allow update: if signedIn()
         && resource.data.assignedToId == request.auth.uid
         && request.resource.data.clientId == resource.data.clientId
@@ -71,7 +64,6 @@ service cloud.firestore {
         && resource.data.status == 'ASSIGNED'
         && request.resource.data.status == 'IN_PROGRESS'
         && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
-
       allow update: if signedIn()
         && resource.data.assignedToId == request.auth.uid
         && request.resource.data.clientId == resource.data.clientId
@@ -92,12 +84,10 @@ service cloud.firestore {
       allow read: if signedIn()
         && (resource.data.clientId == request.auth.uid
           || resource.data.freelancerId == request.auth.uid);
-
       allow create: if signedIn()
         && request.resource.data.clientId == request.auth.uid
         && exists(/databases/$(database)/documents/jobs/$(request.resource.data.jobId))
         && get(/databases/$(database)/documents/jobs/$(request.resource.data.jobId)).data.clientId == request.auth.uid;
-
       allow update: if signedIn()
         && resource.data.freelancerId == request.auth.uid
         && request.resource.data.jobId == resource.data.jobId
@@ -105,17 +95,15 @@ service cloud.firestore {
         && request.resource.data.freelancerId == resource.data.freelancerId
         && request.resource.data.status in ['ACCEPTED', 'DECLINED']
         && request.resource.data.respondedAt != null;
-
       allow update: if signedIn()
         && resource.data.clientId == request.auth.uid;
-
       allow delete: if false;
     }
 
     match /paymentSessions/{jobId} {
       allow read: if signedIn()
-        && (resource.data.clientId == request.auth.uid
-          || resource.data.freelancerId == request.auth.uid);
+        && (get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid
+          || get(/databases/$(database)/documents/jobs/$(jobId)).data.assignedToId == request.auth.uid);
       allow write: if false;
     }
 
@@ -125,8 +113,9 @@ service cloud.firestore {
 
     match /contactUnlocks/{jobId} {
       allow read: if signedIn()
-        && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
-          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId)
+        && request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
+        || signedIn()
+        && request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId
         && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
       allow write: if false;
     }
