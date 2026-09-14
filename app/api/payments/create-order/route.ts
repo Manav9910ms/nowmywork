@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!authorization.startsWith('Bearer ')) return jsonError('Sign in is required.', 401);
     const token = await verifyFirebaseIdToken(authorization.slice(7));
     const body = await request.json() as { jobId?: string; role?: 'CLIENT' | 'FREELANCER'; phone?: string };
-    if (!body.jobId || (body.role !== 'CLIENT' && body.role !== 'FREELANCER')) return jsonError('Invalid payment request.');
+    if (!body.jobId || body.role !== 'CLIENT') return jsonError('Only the client pays the upfront platform fee.');
 
     const jobResult = await getServerDocument<Record<string, unknown>>(`jobs/${body.jobId}`);
     if (!jobResult.exists || !jobResult.data) return jsonError('Project not found.', 404);
@@ -21,14 +21,12 @@ export async function POST(request: NextRequest) {
     const clientId = String(job.clientId ?? '');
     const freelancerId = String(job.assignedToId ?? '');
     if (!['ASSIGNED', 'IN_PROGRESS'].includes(String(job.status ?? ''))) return jsonError('Payment is available after the project is assigned.');
-
-    const isClient = body.role === 'CLIENT' && token.uid === clientId;
-    const isFreelancer = body.role === 'FREELANCER' && token.uid === freelancerId;
-    if (!isClient && !isFreelancer) return jsonError('You are not a participant in this project.', 403);
+    if (token.uid !== clientId) return jsonError('You are not the client for this project.', 403);
 
     const finalAmount = Number(job.budget ?? 0);
     if (!Number.isFinite(finalAmount) || finalAmount <= 0) return jsonError('Project amount is invalid.');
-    const fee = Math.max(1, Math.round(finalAmount * 0.05));
+    const clientFee = Math.max(1, Math.round(finalAmount * 0.05));
+    const freelancerFee = Math.max(1, Math.round(finalAmount * 0.10));
 
     const sessionPath = `paymentSessions/${body.jobId}`;
     const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
@@ -39,11 +37,11 @@ export async function POST(request: NextRequest) {
       clientId,
       freelancerId,
       finalAmount,
-      clientFee: fee,
-      freelancerFee: fee,
+      clientFee,
+      freelancerFee,
       currency: 'INR',
       clientPaymentStatus: current.clientPaymentStatus ?? 'PENDING',
-      freelancerPaymentStatus: current.freelancerPaymentStatus ?? 'PENDING',
+      freelancerPaymentStatus: current.freelancerPaymentStatus ?? 'PAYOUT_PENDING',
       clientPaymentId: current.clientPaymentId ?? null,
       clientOrderId: current.clientOrderId ?? null,
       freelancerPaymentId: current.freelancerPaymentId ?? null,
@@ -53,14 +51,13 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     };
 
-    const alreadyPaid = isClient ? session.clientPaymentStatus === 'PAID' : session.freelancerPaymentStatus === 'PAID';
-    if (alreadyPaid) return NextResponse.json({ alreadyPaid: true, contactsUnlocked: Boolean(session.contactsUnlocked), fee, currency: 'INR' });
+    if (session.clientPaymentStatus === 'PAID') return NextResponse.json({ alreadyPaid: true, contactsUnlocked: Boolean(session.contactsUnlocked), fee: clientFee, currency: 'INR' });
 
     const phone = body.phone?.trim() || token.phoneNumber || null;
     await setServerDocument(`paymentParties/${body.jobId}_${token.uid}`, {
       jobId: body.jobId,
       uid: token.uid,
-      role: body.role,
+      role: 'CLIENT',
       email: token.email ?? null,
       phone,
       updatedAt: now,
@@ -74,11 +71,22 @@ export async function POST(request: NextRequest) {
     if (!keyId || !keySecret) return jsonError('Razorpay test keys are not configured on the server.', 500);
 
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const receipt = `nmw_${body.jobId.slice(-12)}_${body.role.toLowerCase()}`;
+    const receipt = `nmw_${body.jobId.slice(-12)}_client`;
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ amount: fee * 100, currency: 'INR', receipt, notes: { platform: 'NowMyWork', job_id: body.jobId, side: body.role, final_project_amount: String(finalAmount) } }),
+      body: JSON.stringify({
+        amount: clientFee * 100,
+        currency: 'INR',
+        receipt,
+        notes: {
+          platform: 'NowMyWork',
+          job_id: body.jobId,
+          side: 'CLIENT',
+          platform_fee_percent: '5',
+          final_project_amount: String(finalAmount),
+        },
+      }),
     });
 
     if (!razorpayResponse.ok) {
@@ -91,10 +99,10 @@ export async function POST(request: NextRequest) {
     await setServerDocument(sessionPath, {
       ...(latest.data ?? session),
       updatedAt: new Date(),
-      ...(isClient ? { clientOrderId: order.id } : { freelancerOrderId: order.id }),
+      clientOrderId: order.id,
     }, latest.updateTime);
 
-    return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, fee, finalAmount });
+    return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, fee: clientFee, finalAmount, freelancerFee });
   } catch (error) {
     console.error(error);
     return jsonError(error instanceof Error ? error.message : 'Could not create payment order.', 500);
