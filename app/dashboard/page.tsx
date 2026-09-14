@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { logOut } from '@/lib/auth';
 import ClientDashboard from '@/components/client-dashboard';
+import FreelancerProfile from '@/components/freelancer-profile';
 import styles from './dashboard.module.css';
 
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
@@ -52,17 +53,15 @@ export default function DashboardPage() {
         <button className="ghost-btn" onClick={logout}>Sign out</button>
       </header>
 
-      {role === 'CLIENT' ? (
-        <ClientDashboard user={user} />
-      ) : (
+      {role === 'CLIENT' ? <ClientDashboard user={user} /> : role === 'FREELANCER' ? <FreelancerProfile user={user} /> : (
         <section className={styles.shell}>
-          <div className="eyebrow muted">{role === 'FREELANCER' ? 'FREELANCER WORKSPACE' : 'ADMIN WORKSPACE'}</div>
+          <div className="eyebrow muted">ADMIN WORKSPACE</div>
           <h1 className={styles.heading}>Welcome{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.</h1>
-          <p className={styles.sub}>{role === 'FREELANCER' ? 'Your private opportunities and freelancer profile will appear here next.' : 'Your admin controls will appear here next.'}</p>
+          <p className={styles.sub}>Marketplace controls will appear here next.</p>
           <div className={styles.grid}>
-            <article className={styles.tile}><span>01</span><h2>Profile</h2><p>Complete the information NowMyWork needs to understand your fit.</p></article>
-            <article className={styles.tile}><span>02</span><h2>{role === 'FREELANCER' ? 'Opportunities' : 'Operations'}</h2><p>{role === 'FREELANCER' ? 'Private matched work will arrive here.' : 'Marketplace controls will arrive here.'}</p></article>
-            <article className={styles.tile}><span>03</span><h2>Matching</h2><p>NowMyWork will use skills, tech stack, availability and priority to make better matches.</p></article>
+            <article className={styles.tile}><span>01</span><h2>Operations</h2><p>Review marketplace activity and assignments.</p></article>
+            <article className={styles.tile}><span>02</span><h2>Users</h2><p>Manage client and freelancer accounts.</p></article>
+            <article className={styles.tile}><span>03</span><h2>Matching</h2><p>Monitor how opportunities are being matched.</p></article>
           </div>
         </section>
       )}
