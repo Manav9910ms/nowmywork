@@ -19,7 +19,7 @@ export type JobForMatching = {
   priority: ClientPriority;
 };
 
-type ScoredCandidate = FreelancerCandidate & {
+export type ScoredCandidate = FreelancerCandidate & {
   score: number;
 };
 
