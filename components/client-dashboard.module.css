@@ -43,6 +43,22 @@
 .jobAside { min-width: 150px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; border-left: 1px solid var(--line); padding-left: 28px; }
 .jobAside strong { font-size: 25px; letter-spacing: -.04em; }
 .jobAside span { color: var(--muted); font-size: 11px; }
+.matchWrap { grid-column: 1 / -1; }
+.matchPanel { padding-top: 22px; border-top: 1px solid var(--line); }
+.matchHeader { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.matchHeader h4 { margin: 8px 0 0; font-size: 21px; letter-spacing: -.03em; }
+.matchEmpty { margin-top: 14px; padding: 18px; border: 1px dashed #c8c2b6; border-radius: 14px; color: var(--muted); }
+.matchEmpty strong { color: var(--ink); display: block; margin-bottom: 5px; }
+.matchEmpty p { margin: 0; font-size: 13px; }
+.matchesList { display: grid; gap: 8px; margin-top: 14px; }
+.matchCard { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; }
+.rank { font: 600 12px 'DM Mono', monospace; color: var(--muted); }
+.matchInfo { display: grid; gap: 3px; min-width: 0; }
+.matchInfo strong { font-size: 14px; }
+.matchInfo span, .matchInfo small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.matchScore { min-width: 55px; display: grid; justify-items: end; }
+.matchScore strong { font-size: 20px; letter-spacing: -.04em; }
+.matchScore span { color: var(--muted); font-size: 10px; text-transform: uppercase; }
 @media (max-width: 760px) {
   .shell { padding: 54px 0 70px; }
   .topRow { align-items: flex-start; flex-direction: column; }
@@ -55,4 +71,8 @@
   .jobCard { grid-template-columns: 1fr; }
   .jobAside { align-items: flex-start; border-left: 0; border-top: 1px solid var(--line); padding: 18px 0 0; }
   .jobAside strong { font-size: 22px; }
+  .matchWrap { grid-column: auto; }
+  .matchHeader { align-items: flex-start; flex-direction: column; }
+  .matchHeader button { width: 100%; }
+  .matchCard { grid-template-columns: 35px 1fr auto; }
 }
