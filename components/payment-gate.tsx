@@ -175,7 +175,6 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
             <span className={styles.label}>FREELANCER</span>
             <strong>Project amount you pay</strong>
             <div className={styles.fee}>₹{finalAmount.toLocaleString('en-IN')}</div>
-            <span>10% NowMyWork fee is deducted from the freelancer payout later: ₹{freelancerFee.toLocaleString('en-IN')}.</span>
           </article>
         </div>
       ) : (
@@ -184,13 +183,12 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
             <span className={styles.label}>CLIENT PAYMENT</span>
             <strong>Client accepted & paid 5%</strong>
             <div className={styles.fee}>{clientPaid ? 'Verified' : 'Pending'}</div>
-            <span>{clientPaid ? 'The upfront NowMyWork fee is verified. You can proceed with the project.' : 'Waiting for the client to complete the 5% NowMyWork upfront fee.'}</span>
           </article>
           <article className={styles.card}>
             <span className={styles.label}>YOUR PAYOUT</span>
             <strong>Project amount</strong>
             <div className={styles.fee}>₹{finalAmount.toLocaleString('en-IN')}</div>
-            <span>10% NowMyWork fee: ₹{freelancerFee.toLocaleString('en-IN')} · you receive ₹{freelancerReceives.toLocaleString('en-IN')} after completion.</span>
+            <span>After 10% NowMyWork fee, you receive ₹{freelancerReceives.toLocaleString('en-IN')}.</span>
           </article>
         </div>
       )}
