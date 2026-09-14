@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerDocument, setServerDocument, verifyFirebaseIdToken } from '@/lib/server-firestore';
 
@@ -9,7 +9,10 @@ function jsonError(message: string, status = 400) {
 }
 
 function signaturesEqual(a: string, b: string) {
-  return createHmac('sha256', process.env.RAZORPAY_KEY_SECRET ?? '').update(a).digest('hex') === b;
+  const expected = createHmac('sha256', process.env.RAZORPAY_KEY_SECRET ?? '').update(a).digest('hex');
+  const left = Buffer.from(expected, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 export async function POST(request: NextRequest) {
@@ -42,8 +45,9 @@ export async function POST(request: NextRequest) {
     const participantId = body.role === 'CLIENT' ? String(session.clientId ?? '') : String(session.freelancerId ?? '');
     if (participantId !== token.uid) return jsonError('You are not authorized to verify this payment.', 403);
 
-    const signingPayload = `${body.razorpayOrderId}|${body.razorpayPaymentId}`;
-    if (!signaturesEqual(signingPayload, body.razorpaySignature)) return jsonError('Payment signature verification failed.', 400);
+    if (!signaturesEqual(`${body.razorpayOrderId}|${body.razorpayPaymentId}`, body.razorpaySignature)) {
+      return jsonError('Payment signature verification failed.', 400);
+    }
 
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
     const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(body.razorpayPaymentId)}`, {
@@ -60,27 +64,29 @@ export async function POST(request: NextRequest) {
     const updatedSession: Record<string, unknown> = {
       ...session,
       updatedAt: new Date(),
-      ...(body.role === 'CLIENT' ? {
-        clientPaymentStatus: 'PAID',
-        clientPaymentId: body.razorpayPaymentId,
-      } : {
-        freelancerPaymentStatus: 'PAID',
-        freelancerPaymentId: body.razorpayPaymentId,
-      }),
+      ...(body.role === 'CLIENT' ? { clientPaymentStatus: 'PAID', clientPaymentId: body.razorpayPaymentId } : { freelancerPaymentStatus: 'PAID', freelancerPaymentId: body.razorpayPaymentId }),
     };
 
     const clientPaid = body.role === 'CLIENT' ? true : session.clientPaymentStatus === 'PAID';
     const freelancerPaid = body.role === 'FREELANCER' ? true : session.freelancerPaymentStatus === 'PAID';
-    if (clientPaid && freelancerPaid) updatedSession.contactsUnlocked = true;
+    if (clientPaid && freelancerPaid) {
+      updatedSession.contactsUnlocked = true;
+      const clientParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.clientId}`);
+      const freelancerParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.freelancerId}`);
+      if (clientParty.data && freelancerParty.data) {
+        await setServerDocument(`contactUnlocks/${body.jobId}`, {
+          jobId: body.jobId,
+          client: { email: clientParty.data.email ?? null, phone: clientParty.data.phone ?? null },
+          freelancer: { email: freelancerParty.data.email ?? null, phone: freelancerParty.data.phone ?? null },
+          unlockedAt: new Date(),
+        });
+      }
+    }
 
-    await setServerDocument(sessionPath, updatedSession, sessionResult.updateTime);
+    const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
+    await setServerDocument(sessionPath, updatedSession, latest.updateTime);
 
-    return NextResponse.json({
-      success: true,
-      clientPaid,
-      freelancerPaid,
-      contactsUnlocked: clientPaid && freelancerPaid,
-    });
+    return NextResponse.json({ success: true, clientPaid, freelancerPaid, contactsUnlocked: clientPaid && freelancerPaid });
   } catch (error) {
     console.error(error);
     return jsonError(error instanceof Error ? error.message : 'Could not verify payment.', 500);
