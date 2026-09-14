@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const job = jobResult.data;
     const clientId = String(job.clientId ?? '');
     const freelancerId = String(job.assignedToId ?? '');
-    if (String(job.status ?? '') !== 'ASSIGNED') return jsonError('Payment opens after the project is assigned.');
+    if (!['ASSIGNED', 'IN_PROGRESS'].includes(String(job.status ?? ''))) return jsonError('Payment is available after the project is assigned.');
 
     const isClient = body.role === 'CLIENT' && token.uid === clientId;
     const isFreelancer = body.role === 'FREELANCER' && token.uid === freelancerId;
@@ -78,12 +78,7 @@ export async function POST(request: NextRequest) {
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        amount: fee * 100,
-        currency: 'INR',
-        receipt,
-        notes: { platform: 'NowMyWork', job_id: body.jobId, side: body.role, final_project_amount: String(finalAmount) },
-      }),
+      body: JSON.stringify({ amount: fee * 100, currency: 'INR', receipt, notes: { platform: 'NowMyWork', job_id: body.jobId, side: body.role, final_project_amount: String(finalAmount) } }),
     });
 
     if (!razorpayResponse.ok) {
@@ -93,12 +88,11 @@ export async function POST(request: NextRequest) {
 
     const order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
     const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
-    const updated = {
+    await setServerDocument(sessionPath, {
       ...(latest.data ?? session),
       updatedAt: new Date(),
       ...(isClient ? { clientOrderId: order.id } : { freelancerOrderId: order.id }),
-    };
-    await setServerDocument(sessionPath, updated, latest.updateTime);
+    }, latest.updateTime);
 
     return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, fee, finalAmount });
   } catch (error) {
