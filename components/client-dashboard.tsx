@@ -1,8 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { collection, doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { createJob, getClientJobs, parseList, type JobPriority, type JobRecord } from '@/lib/jobs';
 import styles from './client-dashboard.module.css';
 
