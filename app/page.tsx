@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
+const brandLogo = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/logo.png';
+
 const steps = [
   { number: '01', title: 'Post the work', text: 'Describe the project, skills, budget, deadline, and the kind of freelancer you need.' },
   { number: '02', title: 'We match it', text: 'NowMyWork scores eligible freelancers and privately sends the opportunity to the best matches.' },
@@ -17,7 +20,7 @@ export default function Home() {
   return (
     <main>
       <nav className="nav shell">
-        <a className="brand" href="#top" aria-label="NowMyWork home"><img src="/icon.png" alt="" className="brand-logo" /><span>NowMyWork</span></a>
+        <a className="brand" href="#top" aria-label="NowMyWork home"><img src={brandIcon} alt="" className="brand-logo" /><span>NowMyWork</span></a>
         <div className="nav-links"><a href="#how">How it works</a><a href="#why">Why NowMyWork</a><a href="#start">Get started</a></div>
         <div className="nav-actions"><Link className="ghost-btn" href="/signin">Sign in</Link><Link className="dark-btn" href="/signup">Join NowMyWork</Link></div>
       </nav>
@@ -44,7 +47,7 @@ export default function Home() {
 
       <section id="why" className="section feature-section"><div className="shell"><div className="section-heading split"><div><div className="eyebrow muted">WHY NOWMYWORK</div><h2>A marketplace that works like a matcher, not a job board.</h2></div><p>Give clients less to compare and freelancers less to chase. Keep the human value while removing the busywork.</p></div><div className="features-grid">{features.map(([title,text],index) => <article className="feature" key={title}><span className="feature-index">0{index+1}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
 
-      <section id="start" className="cta shell"><div className="cta-brand"><img src="/logo.png" alt="NowMyWork" className="cta-logo" /></div><div><div className="eyebrow">COMING TO LIFE</div><h2>Post work. Get matched. Get moving.</h2><p>NowMyWork is being built around a faster path from “I need help” to “the right person has it.”</p></div><div className="cta-actions"><Link className="primary-btn light" href="/signup">Post a project <span>→</span></Link><Link className="secondary-btn light-outline" href="/signup">Join as a freelancer</Link></div></section>
+      <section id="start" className="cta shell"><div className="cta-brand"><img src={brandLogo} alt="NowMyWork" className="cta-logo" /></div><div><div className="eyebrow">COMING TO LIFE</div><h2>Post work. Get matched. Get moving.</h2><p>NowMyWork is being built around a faster path from “I need help” to “the right person has it.”</p></div><div className="cta-actions"><Link className="primary-btn light" href="/signup">Post a project <span>→</span></Link><Link className="secondary-btn light-outline" href="/signup">Join as a freelancer</Link></div></section>
 
       <footer className="footer shell"><span>© {new Date().getFullYear()} NowMyWork</span><span>Work finds you.</span></footer>
     </main>
