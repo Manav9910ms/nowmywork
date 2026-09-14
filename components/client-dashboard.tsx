@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { createJob, getClientJobs, parseList, type JobPriority, type JobRecord } from '@/lib/jobs';
+import MatchResults from './match-results';
 import styles from './client-dashboard.module.css';
 
 type Props = {
@@ -198,6 +199,9 @@ export default function ClientDashboard({ user }: Props) {
                 <strong>₹{job.budget.toLocaleString('en-IN')}</strong>
                 <span>{job.durationDays} days</span>
                 <span>{priorityLabels[job.priority].title.split(' — ')[0]} priority</span>
+              </div>
+              <div className={styles.matchWrap}>
+                <MatchResults job={job} />
               </div>
             </article>
           ))}
