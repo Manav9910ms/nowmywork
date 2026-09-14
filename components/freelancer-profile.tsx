@@ -9,7 +9,6 @@ import styles from './client-dashboard.module.css';
 type Props = { user: { uid: string; displayName: string | null; email: string | null } };
 
 type Profile = {
-  displayName: string;
   bio: string;
   hourlyRate: number | null;
   experience: number;
@@ -22,16 +21,12 @@ type Profile = {
 };
 
 const emptyProfile: Profile = {
-  displayName: '',
   bio: '', hourlyRate: null, experience: 0, rating: 0, completedJobs: 0,
   availability: 'AVAILABLE', skills: [], techStack: [], portfolioUrl: '',
 };
 
 export default function FreelancerProfile({ user }: Props) {
-  const [profile, setProfile] = useState<Profile>({
-    ...emptyProfile,
-    displayName: user.displayName || user.email?.split('@')[0] || '',
-  });
+  const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -46,9 +41,6 @@ export default function FreelancerProfile({ user }: Props) {
         if (snapshot.exists()) {
           const data = snapshot.data();
           setProfile({
-            displayName: typeof data.displayName === 'string' && data.displayName.trim()
-              ? data.displayName
-              : user.displayName || user.email?.split('@')[0] || 'Freelancer',
             bio: typeof data.bio === 'string' ? data.bio : '',
             hourlyRate: typeof data.hourlyRate === 'number' ? data.hourlyRate : null,
             experience: typeof data.experience === 'number' ? data.experience : 0,
@@ -69,7 +61,7 @@ export default function FreelancerProfile({ user }: Props) {
       }
     }
     void load();
-  }, [user.uid, user.displayName, user.email]);
+  }, [user.uid]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,7 +77,7 @@ export default function FreelancerProfile({ user }: Props) {
     try {
       await setDoc(doc(db, 'freelancers', user.uid), {
         userId: user.uid,
-        displayName: profile.displayName.trim() || user.displayName || user.email?.split('@')[0] || 'Freelancer',
+        displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'Freelancer',
         bio: profile.bio.trim(),
         hourlyRate: profile.hourlyRate,
         experience: Math.max(0, Math.round(profile.experience)),
@@ -97,12 +89,7 @@ export default function FreelancerProfile({ user }: Props) {
         portfolioUrl: profile.portfolioUrl.trim(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
-      setProfile((current) => ({
-        ...current,
-        displayName: current.displayName.trim() || user.displayName || user.email?.split('@')[0] || 'Freelancer',
-        skills: parsedSkills,
-        techStack: parseList(techStack),
-      }));
+      setProfile((current) => ({ ...current, skills: parsedSkills, techStack: parseList(techStack) }));
       setMessage('Profile saved. Your skills and availability can now be used for matching.');
     } catch {
       setError('We could not save your profile. Check your Firestore rules and try again.');
@@ -132,7 +119,6 @@ export default function FreelancerProfile({ user }: Props) {
           <div><div className="eyebrow muted">YOUR FIT</div><h2>Give the matcher useful signals.</h2></div>
           <span>Profile data stays yours</span>
         </div>
-        <label>Display name<input value={profile.displayName} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} placeholder="Your name" /></label>
         <label>Bio<textarea value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="Tell clients what you build, your strengths, and the kind of work you enjoy." rows={5} /></label>
         <div className={styles.twoCol}>
           <label>Hourly rate (₹)<input value={profile.hourlyRate ?? ''} onChange={(e) => setProfile({ ...profile, hourlyRate: e.target.value === '' ? null : Number(e.target.value) })} type="number" min="0" /></label>
