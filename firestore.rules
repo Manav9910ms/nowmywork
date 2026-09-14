@@ -113,10 +113,9 @@ service cloud.firestore {
 
     match /contactUnlocks/{jobId} {
       allow read: if signedIn()
-        && request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
-        || signedIn()
-        && request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId
-        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
+        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID'
+        && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
+          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
       allow write: if false;
     }
   }
