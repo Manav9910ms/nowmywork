@@ -40,7 +40,8 @@ service cloud.firestore {
       allow read: if signedIn()
         && (resource.data.clientId == request.auth.uid
           || (resource.data.assignedToId == request.auth.uid
-            && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED']));
+            && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'])
+          || exists(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)));
 
       allow create: if signedIn()
         && userRole(request.auth.uid) == 'CLIENT'
