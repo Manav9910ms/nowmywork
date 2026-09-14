@@ -20,8 +20,7 @@ export async function POST(request: NextRequest) {
     const job = jobResult.data;
     const clientId = String(job.clientId ?? '');
     const freelancerId = String(job.assignedToId ?? '');
-    const status = String(job.status ?? '');
-    if (status !== 'ASSIGNED') return jsonError('Payment opens after the project is assigned.');
+    if (String(job.status ?? '') !== 'ASSIGNED') return jsonError('Payment opens after the project is assigned.');
 
     const isClient = body.role === 'CLIENT' && token.uid === clientId;
     const isFreelancer = body.role === 'FREELANCER' && token.uid === freelancerId;
@@ -32,8 +31,8 @@ export async function POST(request: NextRequest) {
     const fee = Math.max(1, Math.round(finalAmount * 0.05));
 
     const sessionPath = `paymentSessions/${body.jobId}`;
-    const existing = await getServerDocument<Record<string, unknown>>(sessionPath);
-    const current = existing.data ?? {};
+    const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
+    const current = sessionResult.data ?? {};
     const now = new Date();
     const session = {
       jobId: body.jobId,
@@ -49,21 +48,26 @@ export async function POST(request: NextRequest) {
       clientOrderId: current.clientOrderId ?? null,
       freelancerPaymentId: current.freelancerPaymentId ?? null,
       freelancerOrderId: current.freelancerOrderId ?? null,
-      clientEmail: current.clientEmail ?? (isClient ? token.email ?? null : null),
-      clientPhone: current.clientPhone ?? (isClient ? body.phone?.trim() || token.phoneNumber || null : null),
-      freelancerEmail: current.freelancerEmail ?? (isFreelancer ? token.email ?? null : null),
-      freelancerPhone: current.freelancerPhone ?? (isFreelancer ? body.phone?.trim() || token.phoneNumber || null : null),
       contactsUnlocked: current.contactsUnlocked ?? false,
-      createdAt: existing.exists ? (current.createdAt ?? now) : now,
+      createdAt: sessionResult.exists ? (current.createdAt ?? now) : now,
       updatedAt: now,
     };
 
     const alreadyPaid = isClient ? session.clientPaymentStatus === 'PAID' : session.freelancerPaymentStatus === 'PAID';
-    if (alreadyPaid) {
-      return NextResponse.json({ alreadyPaid: true, contactsUnlocked: Boolean(session.contactsUnlocked), fee, currency: 'INR' });
-    }
+    if (alreadyPaid) return NextResponse.json({ alreadyPaid: true, contactsUnlocked: Boolean(session.contactsUnlocked), fee, currency: 'INR' });
 
-    await setServerDocument(sessionPath, session, existing.updateTime);
+    const phone = body.phone?.trim() || token.phoneNumber || null;
+    await setServerDocument(`paymentParties/${body.jobId}_${token.uid}`, {
+      jobId: body.jobId,
+      uid: token.uid,
+      role: body.role,
+      email: token.email ?? null,
+      phone,
+      updatedAt: now,
+    });
+
+    if (!sessionResult.exists) await setServerDocument(sessionPath, session);
+    else await setServerDocument(sessionPath, session, sessionResult.updateTime);
 
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -73,37 +77,28 @@ export async function POST(request: NextRequest) {
     const receipt = `nmw_${body.jobId.slice(-12)}_${body.role.toLowerCase()}`;
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
-      headers: {
-        authorization: `Basic ${credentials}`,
-        'content-type': 'application/json',
-      },
+      headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         amount: fee * 100,
         currency: 'INR',
         receipt,
-        notes: {
-          platform: 'NowMyWork',
-          job_id: body.jobId,
-          side: body.role,
-          final_project_amount: String(finalAmount),
-        },
+        notes: { platform: 'NowMyWork', job_id: body.jobId, side: body.role, final_project_amount: String(finalAmount) },
       }),
     });
 
     if (!razorpayResponse.ok) {
-      const details = await razorpayResponse.text();
-      console.error('Razorpay order creation failed:', details);
+      console.error('Razorpay order creation failed:', await razorpayResponse.text());
       return jsonError('Razorpay could not create the payment order.', 502);
     }
 
     const order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
-    const update: Record<string, unknown> = {
-      ...session,
+    const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
+    const updated = {
+      ...(latest.data ?? session),
       updatedAt: new Date(),
-      ...(isClient ? { clientOrderId: order.id, clientPhone: body.phone?.trim() || token.phoneNumber || session.clientPhone, clientEmail: token.email ?? session.clientEmail } : {}),
-      ...(isFreelancer ? { freelancerOrderId: order.id, freelancerPhone: body.phone?.trim() || token.phoneNumber || session.freelancerPhone, freelancerEmail: token.email ?? session.freelancerEmail } : {}),
+      ...(isClient ? { clientOrderId: order.id } : { freelancerOrderId: order.id }),
     };
-    await setServerDocument(sessionPath, update, existing.updateTime);
+    await setServerDocument(sessionPath, updated, latest.updateTime);
 
     return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, fee, finalAmount });
   } catch (error) {
