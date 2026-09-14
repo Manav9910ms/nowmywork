@@ -1,9 +1,12 @@
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   type Timestamp,
 } from 'firebase/firestore';
@@ -15,6 +18,7 @@ export type JobStatus = 'OPEN' | 'MATCHING' | 'OFFERED' | 'ASSIGNED' | 'IN_PROGR
 export type JobRecord = {
   id: string;
   clientId: string;
+  assignedToId?: string;
   title: string;
   description: string;
   budget: number;
@@ -25,9 +29,10 @@ export type JobRecord = {
   priority: JobPriority;
   status: JobStatus;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 };
 
-export type CreateJobInput = Omit<JobRecord, 'id' | 'createdAt' | 'status' | 'currency'>;
+export type CreateJobInput = Omit<JobRecord, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'currency'>;
 
 const splitList = (value: string) =>
   value
@@ -50,6 +55,18 @@ export async function createJob(input: CreateJobInput) {
   });
 
   return ref.id;
+}
+
+export async function getJob(jobId: string): Promise<JobRecord | null> {
+  const snapshot = await getDoc(doc(db, 'jobs', jobId));
+  return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as JobRecord) : null;
+}
+
+export async function updateJobStatus(jobId: string, status: JobStatus) {
+  await updateDoc(doc(db, 'jobs', jobId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function getClientJobs(clientId: string): Promise<JobRecord[]> {
