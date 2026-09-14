@@ -27,8 +27,9 @@ export async function POST(request: NextRequest) {
       razorpayPaymentId?: string;
       razorpaySignature?: string;
     };
-    if (!body.jobId || (body.role !== 'CLIENT' && body.role !== 'FREELANCER') || !body.razorpayOrderId || !body.razorpayPaymentId || !body.razorpaySignature) {
-      return jsonError('Incomplete payment verification request.');
+
+    if (!body.jobId || body.role !== 'CLIENT' || !body.razorpayOrderId || !body.razorpayPaymentId || !body.razorpaySignature) {
+      return jsonError('Only the client upfront payment can be verified here.');
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;
@@ -39,11 +40,12 @@ export async function POST(request: NextRequest) {
     const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
     if (!sessionResult.exists || !sessionResult.data) return jsonError('Payment session not found.', 404);
     const session = sessionResult.data;
-    const expectedOrderId = body.role === 'CLIENT' ? String(session.clientOrderId ?? '') : String(session.freelancerOrderId ?? '');
-    if (!expectedOrderId || expectedOrderId !== body.razorpayOrderId) return jsonError('Payment order does not match this project.', 400);
 
-    const participantId = body.role === 'CLIENT' ? String(session.clientId ?? '') : String(session.freelancerId ?? '');
+    const participantId = String(session.clientId ?? '');
     if (participantId !== token.uid) return jsonError('You are not authorized to verify this payment.', 403);
+
+    const expectedOrderId = String(session.clientOrderId ?? '');
+    if (!expectedOrderId || expectedOrderId !== body.razorpayOrderId) return jsonError('Payment order does not match this project.', 400);
 
     if (!signaturesEqual(`${body.razorpayOrderId}|${body.razorpayPaymentId}`, body.razorpaySignature)) {
       return jsonError('Payment signature verification failed.', 400);
@@ -55,38 +57,51 @@ export async function POST(request: NextRequest) {
       cache: 'no-store',
     });
     if (!paymentResponse.ok) return jsonError('Could not verify the Razorpay payment status.', 502);
-    const payment = await paymentResponse.json() as { id?: string; order_id?: string; status?: string; amount?: number; currency?: string };
-    const expectedAmount = Number(body.role === 'CLIENT' ? session.clientFee : session.freelancerFee) * 100;
+
+    const payment = await paymentResponse.json() as {
+      id?: string;
+      order_id?: string;
+      status?: string;
+      amount?: number;
+      currency?: string;
+    };
+    const expectedAmount = Number(session.clientFee ?? 0) * 100;
     if (payment.id !== body.razorpayPaymentId || payment.order_id !== body.razorpayOrderId || payment.status !== 'captured' || payment.amount !== expectedAmount || payment.currency !== 'INR') {
       return jsonError('Payment was not captured for the expected amount.', 400);
     }
 
+    const now = new Date();
     const updatedSession: Record<string, unknown> = {
       ...session,
-      updatedAt: new Date(),
-      ...(body.role === 'CLIENT' ? { clientPaymentStatus: 'PAID', clientPaymentId: body.razorpayPaymentId } : { freelancerPaymentStatus: 'PAID', freelancerPaymentId: body.razorpayPaymentId }),
+      clientPaymentStatus: 'PAID',
+      clientPaymentId: body.razorpayPaymentId,
+      freelancerPaymentStatus: session.freelancerPaymentStatus ?? 'PAYOUT_PENDING',
+      freelancerFee: Number(session.freelancerFee ?? Math.round(Number(session.finalAmount ?? 0) * 0.10)),
+      contactsUnlocked: true,
+      updatedAt: now,
     };
 
-    const clientPaid = body.role === 'CLIENT' ? true : session.clientPaymentStatus === 'PAID';
-    const freelancerPaid = body.role === 'FREELANCER' ? true : session.freelancerPaymentStatus === 'PAID';
-    if (clientPaid && freelancerPaid) {
-      updatedSession.contactsUnlocked = true;
-      const clientParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.clientId}`);
-      const freelancerParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.freelancerId}`);
-      if (clientParty.data && freelancerParty.data) {
-        await setServerDocument(`contactUnlocks/${body.jobId}`, {
-          jobId: body.jobId,
-          client: { email: clientParty.data.email ?? null, phone: clientParty.data.phone ?? null },
-          freelancer: { email: freelancerParty.data.email ?? null, phone: freelancerParty.data.phone ?? null },
-          unlockedAt: new Date(),
-        });
-      }
-    }
+    const clientParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.clientId}`);
+    const freelancerParty = await getServerDocument<Record<string, unknown>>(`paymentParties/${body.jobId}_${session.freelancerId}`);
+    if (!clientParty.data || !freelancerParty.data) return jsonError('Participant contact information is not ready yet.', 409);
+
+    await setServerDocument(`contactUnlocks/${body.jobId}`, {
+      jobId: body.jobId,
+      client: { email: clientParty.data.email ?? null, phone: clientParty.data.phone ?? null },
+      freelancer: { email: freelancerParty.data.email ?? null, phone: freelancerParty.data.phone ?? null },
+      unlockedAt: now,
+    });
 
     const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
     await setServerDocument(sessionPath, updatedSession, latest.updateTime);
 
-    return NextResponse.json({ success: true, clientPaid, freelancerPaid, contactsUnlocked: clientPaid && freelancerPaid });
+    return NextResponse.json({
+      success: true,
+      clientPaid: true,
+      freelancerPaid: false,
+      contactsUnlocked: true,
+      freelancerFee: updatedSession.freelancerFee,
+    });
   } catch (error) {
     console.error(error);
     return jsonError(error instanceof Error ? error.message : 'Could not verify payment.', 500);
