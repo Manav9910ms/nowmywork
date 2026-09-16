@@ -13,26 +13,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /clients/{uid} {
-      allow read: if owns(uid);
-      allow write: if false;
-    }
-
-    match /freelancers/{uid} {
-      allow read: if owns(uid) || (signedIn() && exists(/databases/$(database)/documents/jobs/$(request.auth.uid)) == false);
-      allow write: if false;
-    }
+    match /clients/{uid} { allow read: if owns(uid); allow write: if false; }
+    match /freelancers/{uid} { allow read: if signedIn(); allow write: if false; }
 
     match /jobs/{jobId} {
-      allow read: if signedIn()
-        && (resource.data.clientId == request.auth.uid
-          || (resource.data.assignedToId == request.auth.uid && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED'])
-          || exists(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)));
-      allow create: if signedIn()
-        && userRole(request.auth.uid) == 'CLIENT'
-        && request.resource.data.clientId == request.auth.uid
-        && request.resource.data.status == 'OPEN'
-        && request.resource.data.assignedToId == null;
+      allow read: if signedIn() && (resource.data.clientId == request.auth.uid || (resource.data.assignedToId == request.auth.uid && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']) || exists(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)));
+      allow create: if signedIn() && userRole(request.auth.uid) == 'CLIENT' && request.resource.data.clientId == request.auth.uid && request.resource.data.status == 'OPEN' && request.resource.data.assignedToId == null;
       allow update, delete: if false;
     }
 
@@ -42,22 +28,14 @@ service cloud.firestore {
     }
 
     match /paymentSessions/{jobId} {
-      allow read: if signedIn()
-        && (get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid
-          || get(/databases/$(database)/documents/jobs/$(jobId)).data.assignedToId == request.auth.uid);
+      allow read: if signedIn() && (get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid || get(/databases/$(database)/documents/jobs/$(jobId)).data.assignedToId == request.auth.uid);
       allow write: if false;
     }
-
     match /paymentParties/{partyId} { allow read, write: if false; }
-
     match /contactUnlocks/{jobId} {
-      allow read: if signedIn()
-        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID'
-        && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId
-          || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
+      allow read: if signedIn() && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID' && (request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientId || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
       allow write: if false;
     }
-
     match /notifications/{notificationId} { allow read, write: if false; }
     match /messages/{messageId} { allow read, write: if false; }
   }
