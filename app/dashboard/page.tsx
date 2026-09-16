@@ -9,10 +9,10 @@ import { logOut } from '@/lib/auth';
 import ClientDashboard from '@/components/client-dashboard';
 import FreelancerProfile from '@/components/freelancer-profile';
 import FreelancerOffers from '@/components/freelancer-offers';
+import NotificationsPanel from '@/components/notifications-panel';
 import styles from './dashboard.module.css';
 
 const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
-
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
 
 export default function DashboardPage() {
@@ -20,59 +20,23 @@ export default function DashboardPage() {
   const [role, setRole] = useState<AccountRole | null>(null);
   const [checking, setChecking] = useState(true);
 
-  useEffect(() => {
-    return onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) {
-        setRole(null);
-        setChecking(false);
-        return;
-      }
+  useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
+    setUser(currentUser);
+    if (!currentUser) { setRole(null); setChecking(false); return; }
+    try {
+      const snapshot = await getDoc(doc(db, 'users', currentUser.uid));
+      setRole((snapshot.data()?.role as AccountRole | undefined) ?? 'CLIENT');
+    } catch { setRole('CLIENT'); }
+    finally { setChecking(false); }
+  }), []);
 
-      try {
-        const snapshot = await getDoc(doc(db, 'users', currentUser.uid));
-        setRole((snapshot.data()?.role as AccountRole | undefined) ?? 'CLIENT');
-      } catch {
-        setRole('CLIENT');
-      } finally {
-        setChecking(false);
-      }
-    });
-  }, []);
-
-  async function logout() {
-    await logOut();
-    window.location.href = '/';
-  }
+  async function logout() { await logOut(); window.location.href = '/'; }
 
   if (checking) return <main className={styles.page}><div className={styles.card}><p>Loading your workspace…</p></div></main>;
+  if (!user) return <main className={styles.page}><div className={styles.card}><img src={brandIcon} alt="" className={styles.icon}/><h1>Sign in required.</h1><p>You need a NowMyWork account to access the dashboard.</p><Link className="primary-btn" href="/signin">Go to sign in →</Link></div></main>;
 
-  if (!user) return <main className={styles.page}><div className={styles.card}><img src={brandIcon} alt="" className={styles.icon} /><h1>Sign in required.</h1><p>You need a NowMyWork account to access the dashboard.</p><Link className="primary-btn" href="/signin">Go to sign in →</Link></div></main>;
-
-  return (
-    <main className={styles.page}>
-      <header className={styles.nav}>
-        <Link href="/" className="brand"><img src={brandIcon} alt="" className="brand-logo" /><span>NowMyWork</span></Link>
-        <button className="ghost-btn" onClick={logout}>Sign out</button>
-      </header>
-
-      {role === 'CLIENT' ? <ClientDashboard user={user} /> : role === 'FREELANCER' ? (
-        <>
-          <FreelancerProfile user={user} />
-          <FreelancerOffers freelancerId={user.uid} />
-        </>
-      ) : (
-        <section className={styles.shell}>
-          <div className="eyebrow muted">ADMIN WORKSPACE</div>
-          <h1 className={styles.heading}>Welcome{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.</h1>
-          <p className={styles.sub}>Marketplace controls will appear here next.</p>
-          <div className={styles.grid}>
-            <article className={styles.tile}><span>01</span><h2>Operations</h2><p>Review marketplace activity and assignments.</p></article>
-            <article className={styles.tile}><span>02</span><h2>Users</h2><p>Manage client and freelancer accounts.</p></article>
-            <article className={styles.tile}><span>03</span><h2>Matching</h2><p>Monitor how opportunities are being matched.</p></article>
-          </div>
-        </section>
-      )}
-    </main>
-  );
+  return <main className={styles.page}>
+    <header className={styles.nav}><Link href="/" className="brand"><img src={brandIcon} alt="" className="brand-logo"/><span>NowMyWork</span></Link><NotificationsPanel/><button className="ghost-btn" onClick={logout}>Sign out</button></header>
+    {role === 'CLIENT' ? <ClientDashboard user={user}/> : role === 'FREELANCER' ? <><FreelancerProfile user={user}/><FreelancerOffers freelancerId={user.uid}/></> : <section className={styles.shell}><div className="eyebrow muted">ADMIN WORKSPACE</div><h1 className={styles.heading}>Welcome{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.</h1><p className={styles.sub}>Admin controls are protected by the account role stored in Firestore.</p><div className={styles.grid}><article className={styles.tile}><span>01</span><h2>Operations</h2><p>Review marketplace activity, assignments and exceptions.</p></article><article className={styles.tile}><span>02</span><h2>Users</h2><p>Manage client and freelancer accounts from a dedicated admin surface.</p></article><article className={styles.tile}><span>03</span><h2>Matching</h2><p>Inspect private matching outcomes and offer health.</p></article></div></section>}
+  </main>;
 }
