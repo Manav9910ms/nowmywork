@@ -2,82 +2,150 @@
 
 **Work should find you.**
 
-NowMyWork is a freelance marketplace built around matching instead of endless bidding.
+NowMyWork is a freelance marketplace built around private matching instead of proposal and bidding wars.
 
-## Product loop
+## Marketplace loop
 
-1. A client posts a project.
-2. The platform evaluates skills, tech stack, budget, deadline, priority and freelancer availability.
-3. The best eligible freelancers receive a private opportunity.
-4. A suitable freelancer accepts and the project is assigned.
-5. NowMyWork earns a transaction commission.
+1. A client posts a project with requirements, budget, duration and priority.
+2. NowMyWork filters freelancers by mandatory skills and availability, then scores eligible candidates.
+3. The configurable top N matches receive private offers and in-app notifications.
+4. A freelancer accepts or declines. Assignment is decided server-side with an atomic Firestore transaction.
+5. The assigned client and freelancer get a project workspace with status, payment and project-specific messaging.
+6. Reviews, disputes and marketplace settlement are designed as later production layers.
 
 ## Current stack
 
 - Next.js App Router + TypeScript
 - Firebase Authentication
 - Cloud Firestore
+- Firebase Admin SDK for trusted server-side operations
 - Firestore Security Rules
-- Rule-based top-10 matching engine
+- Zod runtime validation
+- Rule-based, AI-ready matching engine
+- Razorpay Test Mode payment verification
 - Vercel deployment
 
-Firebase Authentication handles browser sign-in. Cloud Firestore stores application data, including user profiles, freelancer profiles, jobs and private offers. The application does not require PostgreSQL, Prisma, Firebase Admin SDK, or server-side private-key credentials.
+This repository intentionally remains a modular monolith. The matching function is isolated so a future rules + historical outcomes + AI/ML ranker can replace the current scorer without redesigning the marketplace.
 
-## Firebase setup
+## Current working areas
 
-1. Create or open the Firebase project.
-2. Enable Authentication and turn on **Email/Password** and **Google** providers.
-3. Create a **Cloud Firestore** database.
-4. Register a Web App in the Firebase project.
-5. Copy the web app configuration into the `NEXT_PUBLIC_FIREBASE_*` variables.
-6. Publish `firestore.rules` as the Firestore Rules for the `(default)` database.
-7. Add `nowmywork.com` and `www.nowmywork.com` to Firebase Authentication's authorized domains.
+### Authentication
 
-Never put service-account private keys in `NEXT_PUBLIC_*` variables. This project intentionally does not require Firebase Admin credentials for the current client-side Firestore architecture.
+- Email/password signup and sign-in
+- Google sign-in
+- Client/freelancer role selection at signup
+- Email verification on email signup
+- Password reset flow
+- Persistent Firebase browser session
 
-## Firestore data model
+### Client
 
-- `users/{uid}` — account identity, display name and role
-- `freelancers/{uid}` — freelancer profile, skills, tech stack, availability and rating fields
-- `jobs/{jobId}` — client project information and matching preferences
-- `offers/{offerId}` — private freelancer opportunities and response state
+- Protected job creation API
+- Budget, duration, required skills, tech stack and priority
+- Client-side dashboard with job list
+- Secure server-triggered matching
 
-The repository contains `firestore.rules` with ownership and role checks for these collections.
+### Freelancer
 
-## Payments
+- Protected profile API
+- Skills, tech stack, rate, experience, portfolio URL and availability
+- Private opportunity list
+- Secure accept/decline API
+- Server-side atomic assignment
 
-Razorpay Test Mode is used for the current payment-gate MVP. The server creates and verifies Razorpay orders while secret credentials remain server-side. The current flow records a 5% NowMyWork platform fee for each side of an assigned project and unlocks direct contacts only after both fees are verified. Live marketplace settlement should use the appropriate Razorpay marketplace/transfer product before production launch.
+### Matching
 
-## Run locally
+Required skills are hard eligibility requirements. BUSY freelancers are excluded. Scores are normalized to 0–100 and include reasons such as skill fit, tech fit, availability, experience, budget compatibility and reliability signals.
+
+The candidate limit is configured with `MATCH_CANDIDATE_LIMIT` and defaults to 10.
+
+### Project workspace
+
+- Server-enforced job status transitions
+- Freelancer start and submit actions
+- Client approval/completion action
+- Project-specific messaging API and UI
+- In-app notification center
+
+### Payments
+
+The current payment flow is **Razorpay Test Mode** only. The server creates the configured client platform-fee order and verifies the Razorpay signature plus captured amount with Razorpay before recording payment status.
+
+Marketplace fees are configuration-driven:
+
+- `CLIENT_FEE_PERCENT` — default 5%
+- `FREELANCER_FEE_PERCENT` — default 10%
+
+These percentages describe platform fees, not guaranteed profit. Live freelancer payouts/transfers, settlement reconciliation and production dispute handling are not yet complete.
+
+## Server environment
+
+Copy `.env.example` to `.env.local` and fill only the values required by the active features.
+
+Never commit Firebase service-account private keys or payment secrets.
+
+## Local development
 
 ```bash
 npm install
 cp .env.example .env.local
-# Set the NEXT_PUBLIC_FIREBASE_* and Razorpay server variables
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Useful checks:
 
-## Auth routes
+```bash
+npm run typecheck
+npm test
+npm run build
+```
 
-- `/signup` — create an account and choose Client or Freelancer
-- `/signin` — email/password or Google sign-in
-- `/dashboard` — authenticated dashboard shell
+## Firebase setup
 
-## Matching
+1. Enable Firebase Authentication with Email/Password and Google.
+2. Create the Cloud Firestore database.
+3. Register the web app and configure `NEXT_PUBLIC_FIREBASE_*` variables.
+4. Create a Firebase service account for server-side Admin SDK use and put its values only in server environment variables.
+5. Publish `firestore.rules`.
+6. Add the production site domain to Firebase Authentication authorized domains.
 
-`lib/matching.ts` contains the initial rule-based scoring engine. It evaluates skill fit, tech-stack fit, rating, experience, completed jobs, availability and budget fit, with different weights for the client's **Quality First**, **Balanced**, or **Speed/Budget First** preference.
+## Data model currently used
 
-## Security
+The working MVP uses Firestore collections rather than Prisma/PostgreSQL. Existing collections include:
 
-Firestore Rules are part of the repository in `firestore.rules`. Publish them to Firebase before using the database in production. The rules prevent users from changing their role after account creation and restrict profile/job writes to the owning authenticated user.
+- `users/{uid}` — identity and role
+- `clients/{uid}` — client profile
+- `freelancers/{uid}` — freelancer profile and matching signals
+- `jobs/{jobId}` — project requirements and lifecycle state
+- `offers/{jobId_freelancerId}` — private opportunities
+- `notifications/{id}` — in-app notifications
+- `messages/{id}` — project-specific communication
+- `paymentSessions/{jobId}` — payment state
+- `paymentParties/{id}` and `contactUnlocks/{jobId}` — protected payment/contact workflow
+
+## Security model
+
+Sensitive marketplace actions are server-controlled with Firebase Admin token verification and role checks. The browser is not trusted for roles, project ownership, assignment results, fee calculation or payment verification.
+
+Offer acceptance and project status changes are validated against current database state. Matching and job creation APIs perform runtime validation before writes.
 
 ## Branding
 
-- `icon.png` — transparent background icon
-- `logo.png` — white-background logo
+- `icon.png` — transparent-background NowMyWork icon
+- `logo.png` — white-background NowMyWork logo
 
-## Deployment
+The app uses these repository assets directly rather than remote GitHub image URLs for product UI.
 
-The application is designed for deployment on Vercel. Firebase provides authentication and Firestore data storage; Vercel needs the public Firebase Web App environment variables plus the server-side Razorpay test credentials used by the payment API.
+## SEO
+
+The public site includes metadata, sitemap and robots configuration. Authenticated dashboard/project areas are disallowed from indexing.
+
+## Testing and CI
+
+GitHub Actions is configured in `.github/workflows/ci.yml` to run dependency installation, TypeScript checking, unit tests and a production build on pushes and pull requests targeting `main`.
+
+Current unit coverage focuses on the matching engine. CI execution still needs to be observed in the GitHub Actions UI because the connected GitHub API currently reports zero workflow runs for this repository.
+
+## Not yet production-complete
+
+The following remain before a full marketplace launch: production-grade payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
