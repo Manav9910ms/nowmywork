@@ -2,102 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function owns(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
-
-    function userRole(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role;
-    }
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+    function userRole(uid) { return get(/databases/$(database)/documents/users/$(uid)).data.role; }
 
     match /users/{uid} {
-      allow create: if owns(uid)
-        && request.resource.data.uid == uid
-        && request.resource.data.role in ['CLIENT', 'FREELANCER'];
+      allow create: if owns(uid) && request.resource.data.uid == uid && request.resource.data.role in ['CLIENT', 'FREELANCER'];
       allow read: if owns(uid);
-      allow update: if owns(uid)
-        && request.resource.data.uid == resource.data.uid
-        && request.resource.data.role == resource.data.role;
+      allow update: if owns(uid) && request.resource.data.uid == resource.data.uid && request.resource.data.role == resource.data.role;
       allow delete: if false;
     }
 
+    match /clients/{uid} {
+      allow read: if owns(uid);
+      allow write: if false;
+    }
+
     match /freelancers/{uid} {
-      allow read: if signedIn();
-      allow create, update: if owns(uid)
-        && userRole(uid) == 'FREELANCER'
-        && request.resource.data.userId == uid;
-      allow delete: if owns(uid);
+      allow read: if owns(uid) || (signedIn() && exists(/databases/$(database)/documents/jobs/$(request.auth.uid)) == false);
+      allow write: if false;
     }
 
     match /jobs/{jobId} {
       allow read: if signedIn()
         && (resource.data.clientId == request.auth.uid
-          || (resource.data.assignedToId == request.auth.uid
-            && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'])
+          || (resource.data.assignedToId == request.auth.uid && resource.data.status in ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED'])
           || exists(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)));
       allow create: if signedIn()
         && userRole(request.auth.uid) == 'CLIENT'
-        && request.resource.data.clientId == request.auth.uid;
-      allow update, delete: if signedIn()
-        && resource.data.clientId == request.auth.uid;
-      allow update: if signedIn()
-        && resource.data.status in ['OPEN', 'OFFERED']
-        && request.resource.data.status == 'ASSIGNED'
-        && request.resource.data.assignedToId == request.auth.uid
-        && getAfter(/databases/$(database)/documents/offers/$(jobId + '_' + request.auth.uid)).data.status == 'ACCEPTED';
-      allow update: if signedIn()
-        && resource.data.assignedToId == request.auth.uid
-        && request.resource.data.clientId == resource.data.clientId
-        && request.resource.data.assignedToId == resource.data.assignedToId
-        && request.resource.data.title == resource.data.title
-        && request.resource.data.description == resource.data.description
-        && request.resource.data.budget == resource.data.budget
-        && request.resource.data.currency == resource.data.currency
-        && request.resource.data.durationDays == resource.data.durationDays
-        && request.resource.data.priority == resource.data.priority
-        && request.resource.data.skills == resource.data.skills
-        && request.resource.data.techStack == resource.data.techStack
-        && resource.data.status == 'ASSIGNED'
-        && request.resource.data.status == 'IN_PROGRESS'
-        && get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.clientPaymentStatus == 'PAID';
-      allow update: if signedIn()
-        && resource.data.assignedToId == request.auth.uid
-        && request.resource.data.clientId == resource.data.clientId
-        && request.resource.data.assignedToId == resource.data.assignedToId
-        && request.resource.data.title == resource.data.title
-        && request.resource.data.description == resource.data.description
-        && request.resource.data.budget == resource.data.budget
-        && request.resource.data.currency == resource.data.currency
-        && request.resource.data.durationDays == resource.data.durationDays
-        && request.resource.data.priority == resource.data.priority
-        && request.resource.data.skills == resource.data.skills
-        && request.resource.data.techStack == resource.data.techStack
-        && resource.data.status == 'IN_PROGRESS'
-        && request.resource.data.status == 'COMPLETED';
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.assignedToId == null;
+      allow update, delete: if false;
     }
 
     match /offers/{offerId} {
-      allow read: if signedIn()
-        && (resource.data.clientId == request.auth.uid
-          || resource.data.freelancerId == request.auth.uid);
-      allow create: if signedIn()
-        && request.resource.data.clientId == request.auth.uid
-        && exists(/databases/$(database)/documents/jobs/$(request.resource.data.jobId))
-        && get(/databases/$(database)/documents/jobs/$(request.resource.data.jobId)).data.clientId == request.auth.uid;
-      allow update: if signedIn()
-        && resource.data.freelancerId == request.auth.uid
-        && request.resource.data.jobId == resource.data.jobId
-        && request.resource.data.clientId == resource.data.clientId
-        && request.resource.data.freelancerId == resource.data.freelancerId
-        && request.resource.data.status in ['ACCEPTED', 'DECLINED']
-        && request.resource.data.respondedAt != null;
-      allow update: if signedIn()
-        && resource.data.clientId == request.auth.uid;
-      allow delete: if false;
+      allow read: if signedIn() && (resource.data.clientId == request.auth.uid || resource.data.freelancerId == request.auth.uid);
+      allow create, update, delete: if false;
     }
 
     match /paymentSessions/{jobId} {
@@ -107,9 +48,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /paymentParties/{partyId} {
-      allow read, write: if false;
-    }
+    match /paymentParties/{partyId} { allow read, write: if false; }
 
     match /contactUnlocks/{jobId} {
       allow read: if signedIn()
@@ -118,5 +57,8 @@ service cloud.firestore {
           || request.auth.uid == get(/databases/$(database)/documents/paymentSessions/$(jobId)).data.freelancerId);
       allow write: if false;
     }
+
+    match /notifications/{notificationId} { allow read, write: if false; }
+    match /messages/{messageId} { allow read, write: if false; }
   }
 }
