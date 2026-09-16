@@ -18,8 +18,8 @@
 .success { background: #f3f9dd; border: 1px solid #d6e8a0; }
 .error { background: #fff0ee; border: 1px solid #efb5af; color: #9a362d; }
 .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr); gap: 16px; margin-top: 28px; }
-.mainCard, .sideCard, .peopleCard { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 30px; }
-.mainCard h2, .peopleCard h2 { margin: 8px 0 18px; font-size: 30px; letter-spacing: -.045em; }
+.mainCard, .sideCard, .peopleCard, .messagesCard { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 30px; }
+.mainCard h2, .peopleCard h2, .messagesCard h2 { margin: 8px 0 18px; font-size: 30px; letter-spacing: -.045em; }
 .description { margin: 0; color: var(--muted); line-height: 1.75; white-space: pre-wrap; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .chips span { padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; background: var(--bg); }
@@ -36,11 +36,24 @@
 .person small { color: var(--muted); }
 .notice { margin-top: 16px; padding: 18px 20px; border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); }
 .notice strong { color: var(--text); }
+.messageIntro { color: var(--muted); margin: -8px 0 18px; line-height: 1.6; }
+.messageList { max-height: 460px; overflow: auto; display: grid; gap: 10px; padding: 4px 2px; }
+.messageEmpty { padding: 30px 10px; display: grid; gap: 6px; color: var(--muted); text-align: center; }
+.messageEmpty strong { color: var(--text); }
+.message { max-width: 82%; padding: 13px 15px; background: var(--bg); border: 1px solid var(--line); border-radius: 16px 16px 16px 6px; }
+.message.mine { justify-self: end; background: var(--dark); color: white; border-color: var(--dark); border-radius: 16px 16px 6px 16px; }
+.message > div { display: flex; gap: 10px; justify-content: space-between; font: 500 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+.message p { white-space: pre-wrap; margin: 8px 0 0; line-height: 1.55; font-size: 13px; }
+.messageForm { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.messageForm textarea { width: 100%; resize: vertical; min-height: 74px; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; padding: 12px 14px; color: var(--ink); outline: none; }
+.messageForm textarea:focus { border-color: #969083; box-shadow: 0 0 0 3px rgba(200,255,69,.18); }
 @media (max-width: 760px) {
   .nav { padding: 0 16px; }
   .shell { padding-top: 38px; }
   .heroRow { display: grid; align-items: start; }
   .actions { flex-wrap: wrap; }
   .grid, .personGrid { grid-template-columns: 1fr; }
-  .mainCard, .sideCard, .peopleCard, .narrow { padding: 24px; }
+  .mainCard, .sideCard, .peopleCard, .messagesCard, .narrow { padding: 24px; }
+  .messageForm { grid-template-columns: 1fr; }
+  .messageForm button { width: 100%; }
 }
