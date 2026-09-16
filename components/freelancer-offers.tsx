@@ -2,93 +2,62 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { auth } from '@/lib/firebase';
 import styles from './freelancer-offers.module.css';
-import { getFreelancerOffers, respondToOffer, type JobOffer } from '@/lib/offers';
 
-type Props = { freelancerId: string };
+type Offer = { id: string; jobId: string; title: string; description: string; budget: number; durationDays: number; skills: string[]; score: number; status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'SUPERSEDED'; expiresAt?: { _seconds?: number; seconds?: number } };
 
-function formatExpiry(offer: JobOffer) {
-  if (!offer.expiresAt) return 'No expiry set';
-  return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(offer.expiresAt.toDate());
+function formatExpiry(value: Offer['expiresAt']) {
+  const seconds = value?._seconds ?? value?.seconds;
+  return seconds ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(seconds * 1000)) : 'No expiry set';
 }
 
-export default function FreelancerOffers({ freelancerId }: Props) {
-  const [offers, setOffers] = useState<JobOffer[]>([]);
+export default function FreelancerOffers({ freelancerId }: { freelancerId: string }) {
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   async function loadOffers() {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
-      setOffers(await getFreelancerOffers(freelancerId));
-    } catch {
-      setError('We could not load your private opportunities.');
-    } finally {
-      setLoading(false);
-    }
+      const user = auth.currentUser;
+      if (!user || user.uid !== freelancerId) throw new Error('Sign in is required.');
+      const token = await user.getIdToken();
+      const response = await fetch('/api/offers', { headers: { authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const data = await response.json() as { offers?: Offer[]; error?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Could not load private opportunities.');
+      setOffers(data.offers ?? []);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'We could not load your private opportunities.'); }
+    finally { setLoading(false); }
   }
 
-  useEffect(() => {
-    void loadOffers();
-  }, [freelancerId]);
+  useEffect(() => { void loadOffers(); }, [freelancerId]);
 
-  async function respond(offer: JobOffer, response: 'ACCEPTED' | 'DECLINED') {
-    setBusyId(offer.id);
-    setMessage('');
-    setError('');
+  async function respond(offer: Offer, action: 'ACCEPTED' | 'DECLINED') {
+    setBusyId(offer.id); setMessage(''); setError('');
     try {
-      await respondToOffer(offer, response);
-      setOffers((current) => current.map((item) => item.id === offer.id ? { ...item, status: response } : item));
-      setMessage(response === 'ACCEPTED' ? 'Project accepted. This opportunity is now assigned to you.' : 'Offer declined.');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'We could not update this offer.');
-    } finally {
-      setBusyId(null);
-    }
+      const user = auth.currentUser; if (!user) throw new Error('Sign in is required.');
+      const token = await user.getIdToken();
+      const response = await fetch('/api/offers', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ offerId: offer.id, action }) });
+      const data = await response.json() as { error?: string; status?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Could not update this offer.');
+      setOffers((current) => current.map((item) => item.id === offer.id ? { ...item, status: action } : action === 'ACCEPTED' && item.status === 'PENDING' ? { ...item, status: 'SUPERSEDED' } : item));
+      setMessage(action === 'ACCEPTED' ? 'Project accepted. This opportunity is now assigned to you.' : 'Offer declined.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'We could not update this offer.'); }
+    finally { setBusyId(null); }
   }
 
   const pendingOffers = offers.filter((offer) => offer.status === 'PENDING');
 
-  return (
-    <section className={styles.section}>
-      <div className={styles.header}>
-        <div>
-          <div className="eyebrow muted">PRIVATE OPPORTUNITIES</div>
-          <h2>Work matched to you.</h2>
-          <p>No bidding. These are opportunities NowMyWork selected specifically for your profile.</p>
-        </div>
-        <span>{pendingOffers.length} pending</span>
-      </div>
-
-      {message && <div className={styles.success} role="status">{message}</div>}
-      {error && <div className={styles.error} role="alert">{error}</div>}
-
-      {loading ? (
-        <div className={styles.empty}>Loading your opportunities…</div>
-      ) : offers.length === 0 ? (
-        <div className={styles.empty}><strong>No private opportunities yet.</strong><p>Keep your skills and availability updated. New matching work will appear here.</p></div>
-      ) : (
-        <div className={styles.list}>
-          {offers.map((offer) => (
-            <article key={offer.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div><span className={styles.status}>{offer.status}</span><h3>{offer.title}</h3></div>
-                <div className={styles.score}><strong>{offer.score.toFixed(0)}</strong><span>match</span></div>
-              </div>
-              <p className={styles.description}>{offer.description}</p>
-              <div className={styles.meta}><span>₹{offer.budget.toLocaleString('en-IN')}</span><span>{offer.durationDays} days</span><span>{offer.skills.slice(0, 3).join(' · ')}</span></div>
-              <div className={styles.bottom}>
-                <span>Offer expires {formatExpiry(offer)}</span>
-                {offer.status === 'PENDING' && <div className={styles.actions}><button className="secondary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'DECLINED')}>Decline</button><button className="primary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'ACCEPTED')}>{busyId === offer.id ? 'Updating…' : 'Accept project →'}</button></div>}
-                {offer.status === 'ACCEPTED' && <div className={styles.actions}><strong className={styles.accepted}>Assigned to you ✓</strong><Link href={`/project/${offer.jobId}`} className="secondary-btn">Open project →</Link></div>}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
+  return <section className={styles.section}>
+    <div className={styles.header}><div><div className="eyebrow muted">PRIVATE OPPORTUNITIES</div><h2>Work matched to you.</h2><p>No bidding. These are opportunities NowMyWork selected specifically for your profile.</p></div><span>{pendingOffers.length} pending</span></div>
+    {message && <div className={styles.success} role="status">{message}</div>}{error && <div className={styles.error} role="alert">{error}</div>}
+    {loading ? <div className={styles.empty}>Loading your opportunities…</div> : offers.length === 0 ? <div className={styles.empty}><strong>No private opportunities yet.</strong><p>Keep your skills and availability updated. New matching work will appear here.</p></div> : <div className={styles.list}>{offers.map((offer) => <article key={offer.id} className={styles.card}>
+      <div className={styles.cardTop}><div><span className={styles.status}>{offer.status}</span><h3>{offer.title}</h3></div><div className={styles.score}><strong>{offer.score.toFixed(0)}</strong><span>match</span></div></div>
+      <p className={styles.description}>{offer.description}</p><div className={styles.meta}><span>₹{offer.budget.toLocaleString('en-IN')}</span><span>{offer.durationDays} days</span><span>{offer.skills.slice(0, 3).join(' · ')}</span></div>
+      <div className={styles.bottom}><span>Offer expires {formatExpiry(offer.expiresAt)}</span>{offer.status === 'PENDING' && <div className={styles.actions}><button className="secondary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'DECLINED')}>Decline</button><button className="primary-btn" type="button" disabled={busyId === offer.id} onClick={() => void respond(offer, 'ACCEPTED')}>{busyId === offer.id ? 'Updating…' : 'Accept project →'}</button></div>}{offer.status === 'ACCEPTED' && <div className={styles.actions}><strong className={styles.accepted}>Assigned to you ✓</strong><Link href={`/project/${offer.jobId}`} className="secondary-btn">Open project →</Link></div>}</div>
+    </article>)}</div>}
+  </section>;
 }
