@@ -1,22 +1,15 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
-const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
-
 export const metadata: Metadata = {
-  title: 'NowMyWork — Work finds you.',
-  description: 'A faster freelance marketplace that matches clients with the right freelancers instead of endless bidding.',
-  icons: {
-    icon: brandIcon,
-    shortcut: brandIcon,
-    apple: brandIcon,
-  },
+  metadataBase: new URL('https://nowmywork.com'),
+  title: { default: 'NowMyWork — Work should find you.', template: '%s — NowMyWork' },
+  description: 'A freelance marketplace that matches clients with the right freelancers instead of endless bidding.',
+  icons: { icon: '/icon.png', shortcut: '/icon.png', apple: '/icon.png' },
+  openGraph: { title: 'NowMyWork — Work should find you.', description: 'Post the work. We find the people.', type: 'website', url: 'https://nowmywork.com', images: ['/icon.png'] },
+  twitter: { card: 'summary', title: 'NowMyWork — Work should find you.', description: 'A freelance marketplace built around private matching.' },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
+  return <html lang="en"><body>{children}</body></html>;
 }
