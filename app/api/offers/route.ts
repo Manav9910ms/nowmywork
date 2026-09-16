@@ -49,18 +49,14 @@ export async function POST(request: NextRequest) {
       const job = await transaction.get(jobRef);
       if (!job.exists) throw new Error('JOB_NOT_FOUND');
       const jobData = job.data()!;
+      const remaining = await db.collection('offers').where('jobId', '==', String(offerData.jobId)).where('status', '==', 'PENDING').get();
 
       if (offerData.status !== 'PENDING') throw new Error('OFFER_UNAVAILABLE');
-      if (offerData.expiresAt?.toMillis && offerData.expiresAt.toMillis() <= Date.now()) {
-        transaction.update(offerRef, { status: 'EXPIRED', updatedAt: now });
-        throw new Error('OFFER_EXPIRED');
-      }
+      if (offerData.expiresAt?.toMillis && offerData.expiresAt.toMillis() <= Date.now()) throw new Error('OFFER_EXPIRED');
       if (!['OPEN', 'OFFERED'].includes(String(jobData.status)) || jobData.assignedToId) throw new Error('JOB_ASSIGNED');
 
       transaction.update(jobRef, { status: 'ASSIGNED', assignedToId: user.uid, assignedAt: now, updatedAt: now });
       transaction.update(offerRef, { status: 'ACCEPTED', respondedAt: now, updatedAt: now });
-
-      const remaining = await db.collection('offers').where('jobId', '==', String(offerData.jobId)).where('status', '==', 'PENDING').get();
       for (const other of remaining.docs) {
         if (other.id !== offerId) transaction.update(other.ref, { status: 'SUPERSEDED', updatedAt: now });
       }
