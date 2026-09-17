@@ -31,14 +31,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (target === 'COMPLETED' && job.clientId !== user.uid) throw new Error('FORBIDDEN');
       if (target === 'CANCELLED' && job.clientId !== user.uid && job.assignedToId !== user.uid) throw new Error('FORBIDDEN');
 
+      let pendingOffers = null;
+      if (target === 'CANCELLED' || target === 'COMPLETED') {
+        pendingOffers = await transaction.get(db.collection('offers').where('jobId', '==', jobId).where('status', '==', 'PENDING').limit(50));
+      }
+
       transaction.update(ref, { status: target, updatedAt: FieldValue.serverTimestamp() });
+
+      if (pendingOffers && !pendingOffers.empty) {
+        pendingOffers.docs.forEach((offer) => transaction.update(offer.ref, { status: 'SUPERSEDED', updatedAt: FieldValue.serverTimestamp() }));
+      }
 
       if (target === 'COMPLETED' || target === 'CANCELLED') {
         if (job.assignedToId) {
           const freelancerRef = db.collection('freelancers').doc(String(job.assignedToId));
           transaction.set(freelancerRef, { availability: 'AVAILABLE', updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         }
-        // No new offers can become valid after a terminal project state.
       }
 
       const recipient = user.uid === job.clientId ? job.assignedToId : job.clientId;
