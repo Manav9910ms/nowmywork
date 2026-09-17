@@ -6,11 +6,10 @@ import { resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail, sync
 
 type Mode = 'signin' | 'signup';
 type Props = { mode: Mode };
-type AuthError = { code?: string; message?: string };
+type AuthError = { code?: string };
 
 function friendlyError(error: unknown) {
   const code = (error as AuthError)?.code ?? '';
-  const message = (error as AuthError)?.message ?? '';
   const messages: Record<string, string> = {
     'auth/invalid-credential': 'Email or password is incorrect.',
     'auth/email-already-in-use': 'An account already exists with this email.',
@@ -19,12 +18,17 @@ function friendlyError(error: unknown) {
     'auth/popup-closed-by-user': 'Google sign-in was closed before completion.',
     'auth/popup-blocked': 'Your browser blocked the sign-in popup. Please allow popups and try again.',
     'auth/user-not-found': 'No account was found for this email.',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+    'auth/network-request-failed': 'Network error. Check your connection and try again.',
+    'auth/operation-not-allowed': 'This sign-in method is not enabled for NowMyWork yet.',
   };
-  return messages[code] ?? message ?? 'Something went wrong. Please try again.';
+  return messages[code] ?? 'Something went wrong. Please try again.';
 }
 
 export default function AuthCard({ mode }: Props) {
-  const router = useRouter(); const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [role, setRole] = useState<'CLIENT' | 'FREELANCER'>('CLIENT'); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [forgot, setForgot] = useState(false);
+  const router = useRouter();
+  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'CLIENT' | 'FREELANCER'>('CLIENT'); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [forgot, setForgot] = useState(false);
   const signup = mode === 'signup';
 
   async function finishAuth(account: Awaited<ReturnType<typeof signUpWithEmail>>, selectedRole?: 'CLIENT' | 'FREELANCER') { await syncAccount(account, selectedRole); }
@@ -32,7 +36,7 @@ export default function AuthCard({ mode }: Props) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setMessage(''); setBusy(true);
     try {
-      if (forgot) { await resetPassword(email); setMessage('Password reset instructions have been sent if that email is registered.'); return; }
+      if (forgot) { await resetPassword(email); setMessage('If an account exists for that email, password reset instructions have been sent.'); return; }
       const account = signup ? await signUpWithEmail(email.trim(), password, name.trim()) : await signInWithEmail(email.trim(), password);
       await finishAuth(account, signup ? role : undefined); router.push('/dashboard'); router.refresh();
     } catch (err) { setError(friendlyError(err)); }
@@ -49,9 +53,9 @@ export default function AuthCard({ mode }: Props) {
     <div><div className="eyebrow muted">{forgot ? 'RESET PASSWORD' : signup ? 'CREATE ACCOUNT' : 'WELCOME BACK'}</div><h1>{forgot ? 'Reset your password.' : signup ? 'Start with NowMyWork.' : 'Good to see you.'}</h1><p>{forgot ? 'Enter your account email and we’ll send password reset instructions.' : signup ? 'Create your account and tell us which side of the marketplace you are on.' : 'Sign in to continue to your NowMyWork dashboard.'}</p></div>
     {signup && !forgot && <div className="role-switch" role="group" aria-label="Account type"><button type="button" className={role === 'CLIENT' ? 'selected' : ''} onClick={() => setRole('CLIENT')}>I need a freelancer</button><button type="button" className={role === 'FREELANCER' ? 'selected' : ''} onClick={() => setRole('FREELANCER')}>I want work</button></div>}
     <form onSubmit={submit} className="auth-form">
-      {signup && !forgot && <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" required/></label>}
-      <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" required/></label>
-      {!forgot && <label>Password<input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" type="password" autoComplete={signup ? 'new-password' : 'current-password'} minLength={6} required/></label>}
+      {signup && !forgot && <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" maxLength={100} required/></label>}
+      <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" autoComplete="email" maxLength={254} required/></label>
+      {!forgot && <label>Password<input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" type="password" autoComplete={signup ? 'new-password' : 'current-password'} minLength={6} maxLength={128} required/></label>}
       {error && <div className="auth-error" role="alert">{error}</div>}{message && <div className="auth-success" role="status">{message}</div>}
       <button className="primary-btn auth-submit" disabled={busy}>{busy ? 'Please wait…' : forgot ? 'Send reset email →' : signup ? 'Create account →' : 'Sign in →'}</button>
     </form>

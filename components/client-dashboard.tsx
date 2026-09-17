@@ -20,6 +20,12 @@ function formatDate(job: JobRecord) {
   return date ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date) : 'Just now';
 }
 
+function formatDeadline(value?: string | null) {
+  if (!value) return 'Duration based';
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date) : 'Duration based';
+}
+
 export default function ClientDashboard({ user }: Props) {
   const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -31,6 +37,7 @@ export default function ClientDashboard({ user }: Props) {
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
   const [durationDays, setDurationDays] = useState('7');
+  const [deadline, setDeadline] = useState('');
   const [skills, setSkills] = useState('');
   const [techStack, setTechStack] = useState('');
   const [priority, setPriority] = useState<JobPriority>('BALANCED');
@@ -48,6 +55,10 @@ export default function ClientDashboard({ user }: Props) {
 
   useEffect(() => { void loadJobs(); }, [user.uid]);
 
+  function resetForm() {
+    setTitle(''); setDescription(''); setBudget(''); setDurationDays('7'); setDeadline(''); setSkills(''); setTechStack(''); setPriority('BALANCED');
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -56,11 +67,13 @@ export default function ClientDashboard({ user }: Props) {
     const days = Number(durationDays);
     const skillList = parseList(skills);
     const stackList = parseList(techStack);
+    const deadlineDate = deadline ? new Date(deadline) : null;
 
     if (!title.trim() || !description.trim()) return setError('Add a title and description for the work.');
     if (!Number.isFinite(amount) || amount <= 0) return setError('Enter a valid budget greater than ₹0.');
     if (!Number.isInteger(days) || days <= 0) return setError('Enter a valid duration in days.');
     if (skillList.length === 0) return setError('Add at least one required skill.');
+    if (deadlineDate && (!Number.isFinite(deadlineDate.getTime()) || deadlineDate.getTime() <= Date.now())) return setError('Choose a future deadline.');
 
     setSaving(true);
     try {
@@ -70,17 +83,19 @@ export default function ClientDashboard({ user }: Props) {
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), budget: Math.round(amount), durationDays: days, skills: skillList, techStack: stackList, priority }),
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), budget: Math.round(amount), durationDays: days, deadline: deadlineDate ? deadlineDate.toISOString() : null, skills: skillList, techStack: stackList, priority }),
       });
       const data = await response.json() as { error?: string };
       if (!response.ok) throw new Error(data.error ?? 'Could not post this project.');
-      setTitle(''); setDescription(''); setBudget(''); setDurationDays('7'); setSkills(''); setTechStack(''); setPriority('BALANCED'); setShowForm(false);
+      resetForm(); setShowForm(false);
       setSuccess('Your work is posted. NowMyWork can now match it to eligible freelancers.');
       await loadJobs();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not post this job.');
     } finally { setSaving(false); }
   }
+
+  const openableStatuses = ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED', 'CANCELLED', 'DISPUTED'];
 
   return (
     <section className={styles.shell}>
@@ -97,10 +112,11 @@ export default function ClientDashboard({ user }: Props) {
           <label>Project title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Build a modern SaaS dashboard" required /></label>
           <label>What do you need?<textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the outcome, scope and anything important for the freelancer to know." rows={5} required /></label>
           <div className={styles.twoCol}><label>Budget (₹)<input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="50000" type="number" min="1" step="1" required /></label><label>Duration (days)<input value={durationDays} onChange={(e) => setDurationDays(e.target.value)} type="number" min="1" step="1" required /></label></div>
+          <label>Deadline (optional)<input value={deadline} onChange={(e) => setDeadline(e.target.value)} type="datetime-local"/><span className={styles.hint}>Leave blank to use the project duration. A deadline, when provided, must be in the future.</span></label>
           <div className={styles.twoCol}><label>Required skills<input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, UI design, TypeScript" required /></label><label>Tech stack<input value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder="Next.js, Firebase" /></label></div>
           <p className={styles.hint}>Separate skills with commas. Required skills are hard eligibility requirements.</p>
           <fieldset><legend>What matters most?</legend><div className={styles.priorityGrid}>{(Object.keys(priorityLabels) as JobPriority[]).map((key) => <button key={key} type="button" className={priority === key ? styles.prioritySelected : styles.priority} onClick={() => setPriority(key)}><strong>{priorityLabels[key].title}</strong><span>{priorityLabels[key].text}</span></button>)}</div></fieldset>
-          <div className={styles.formActions}><button type="button" className="secondary-btn" onClick={() => setShowForm(false)}>Cancel</button><button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Posting…' : 'Post work →'}</button></div>
+          <div className={styles.formActions}><button type="button" className="secondary-btn" onClick={() => { resetForm(); setShowForm(false); }}>Cancel</button><button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Posting…' : 'Post work →'}</button></div>
         </form>
       )}
 
@@ -108,8 +124,8 @@ export default function ClientDashboard({ user }: Props) {
       {loadingJobs ? <div className={styles.empty}>Loading your work…</div> : jobs.length === 0 ? <div className={styles.empty}><strong>Your first project starts here.</strong><p>Post a job and NowMyWork will have the information it needs to start matching.</p><button className="primary-btn" onClick={() => setShowForm(true)}>Post your first job →</button></div> : (
         <div className={styles.jobsList}>{jobs.map((job) => <article key={job.id} className={styles.jobCard}>
           <div className={styles.jobMain}><div className={styles.jobMeta}><span>{job.status}</span><span>{formatDate(job)}</span></div><h3>{job.title}</h3><p>{job.description}</p><div className={styles.chips}>{job.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}{job.skills.length > 4 && <span>+{job.skills.length - 4}</span>}</div></div>
-          <div className={styles.jobAside}><strong>₹{job.budget.toLocaleString('en-IN')}</strong><span>{job.durationDays} days</span><span>{priorityLabels[job.priority].title.split(' — ')[0]} priority</span></div>
-          <div className={styles.matchWrap}><MatchResults job={job}/>{['ASSIGNED', 'IN_PROGRESS', 'COMPLETED'].includes(job.status) && <Link href={`/project/${job.id}`} className="secondary-btn">Open project →</Link>}</div>
+          <div className={styles.jobAside}><strong>₹{job.budget.toLocaleString('en-IN')}</strong><span>{job.durationDays} days</span><span>{formatDeadline(job.deadline)}</span><span>{priorityLabels[job.priority].title.split(' — ')[0]} priority</span></div>
+          <div className={styles.matchWrap}><MatchResults job={job}/>{openableStatuses.includes(job.status) && <Link href={`/project/${job.id}`} className="secondary-btn">Open project →</Link>}</div>
         </article>)}</div>
       )}
     </section>

@@ -30,7 +30,7 @@ const normalize = (values: string[]) => new Set(values.map((value) => value.trim
 const overlapScore = (required: Set<string>, actual: Set<string>) => {
   if (required.size === 0) return 1;
   let matched = 0;
-  for (const value of required) if (actual.has(value)) matched++;
+  for (const value of required) if (actual.has(value)) matched += 1;
   return matched / required.size;
 };
 
@@ -55,11 +55,11 @@ export function scoreFreelancerDetailed(job: JobForMatching, freelancer: Freelan
   const techFit = overlapScore(normalize(job.techStack), normalize(freelancer.techStack));
   const ratingFit = Math.min(Math.max(freelancer.rating ?? 0, 0), 5) / 5;
   const experienceFit = Math.min(Math.max(freelancer.experience ?? 0, 0), 10) / 10;
-  const completionFit = freelancer.completionRate == null ? Math.min(Math.max(freelancer.completedJobs ?? 0, 0), 20) / 20 : Math.min(Math.max(freelancer.completionRate, 0), 100) / 100;
-  const cancellationFit = 1 - Math.min(Math.max(freelancer.cancellationRate ?? 0, 0), 100) / 100;
+  const completionFit = freelancer.completionRate == null ? 0.5 : Math.min(Math.max(freelancer.completionRate, 0), 100) / 100;
+  const cancellationFit = freelancer.cancellationRate == null ? 0.5 : 1 - Math.min(Math.max(freelancer.cancellationRate, 0), 100) / 100;
   const reliabilityFit = completionFit * 0.8 + cancellationFit * 0.2;
   const availabilityFit = freelancer.availability === 'AVAILABLE' ? 1 : freelancer.availability === 'AWAY' ? 0.35 : 0;
-  const responseFit = Math.min(Math.max(freelancer.responseRate ?? 50, 0), 100) / 100;
+  const responseFit = freelancer.responseRate == null ? 0.5 : Math.min(Math.max(freelancer.responseRate, 0), 100) / 100;
   const targetHourly = job.budget / Math.max(job.durationDays * 8, 1);
   const budgetFit = freelancer.hourlyRate == null ? 0.5 : freelancer.hourlyRate <= targetHourly ? 1 : Math.max(0.1, targetHourly / freelancer.hourlyRate);
   const weights = getWeights(job.priority);

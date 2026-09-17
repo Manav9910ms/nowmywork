@@ -6,12 +6,12 @@ NowMyWork is a freelance marketplace built around private matching instead of pr
 
 ## Marketplace loop
 
-1. A client posts a project with requirements, budget, duration and priority.
+1. A client posts a project with requirements, budget, duration, optional deadline and priority.
 2. NowMyWork filters freelancers by mandatory skills and availability, then scores eligible candidates.
 3. The configurable top N matches receive private offers and in-app notifications.
 4. A freelancer accepts or declines. Assignment is decided server-side with an atomic Firestore transaction.
 5. The assigned client and freelancer get a project workspace with status, payment and project-specific messaging.
-6. Reviews, disputes and marketplace settlement are designed as later production layers.
+6. Client platform-fee payments are verified through Razorpay and reflected through both immediate API verification and webhook events.
 
 ## Current stack
 
@@ -25,11 +25,9 @@ NowMyWork is a freelance marketplace built around private matching instead of pr
 - Razorpay Live Mode client-fee payment flow
 - Vercel deployment
 
-This repository intentionally remains a modular monolith. The matching function is isolated so a future rules + historical outcomes + AI/ML ranker can replace the current scorer without redesigning the marketplace.
+The repository remains a modular monolith. Matching is isolated so a future rules + historical outcomes + AI/ML ranker can replace the current scorer without redesigning the marketplace.
 
-## Current working areas
-
-### Authentication
+## Authentication
 
 - Email/password signup and sign-in
 - Google sign-in
@@ -37,57 +35,73 @@ This repository intentionally remains a modular monolith. The matching function 
 - Email verification on email signup
 - Password reset flow
 - Persistent Firebase browser session
+- Server-side Firebase ID-token verification
+- Server-side role validation
 
-### Client
+## Client
 
-- Protected job creation API
-- Budget, duration, required skills, tech stack and priority
-- Client-side dashboard with job list
-- Secure server-triggered matching
+- Protected server-side job creation
+- Budget, duration, optional deadline, required skills, tech stack and priority
+- Client dashboard with project list
+- Secure matching trigger
+- Project workspace and status workflow
 
-### Freelancer
+## Freelancer
 
 - Protected profile API
 - Skills, tech stack, rate, experience, portfolio URL and availability
 - Private opportunity list
 - Secure accept/decline API
-- Server-side atomic assignment
+- Atomic assignment
+- Availability is switched to BUSY when assigned and restored to AVAILABLE on terminal completion/cancellation
 
-### Matching
+## Matching
 
-Required skills are hard eligibility requirements. BUSY freelancers are excluded. Scores are normalized to 0–100 and include reasons such as skill fit, tech fit, availability, experience, budget compatibility and reliability signals.
+Required skills are hard eligibility requirements. BUSY and unknown availability states are excluded. Scores are normalized to 0–100 and include reasons such as skill fit, tech fit, availability, experience, budget compatibility and reliability signals.
 
-The candidate limit is configured with `MATCH_CANDIDATE_LIMIT` and defaults to 10.
+The candidate limit is configured with `MATCH_CANDIDATE_LIMIT` and defaults to 10. Rematching safely supersedes stale pending offers that are no longer in the selected set.
 
-### Project workspace
+## Project lifecycle
 
-- Server-enforced job status transitions
-- Freelancer start and submit actions
-- Client approval/completion action
-- Project-specific messaging API and UI
-- In-app notification center
+`DRAFT → OPEN → MATCHING → OFFERED → ASSIGNED → IN_PROGRESS → SUBMITTED → COMPLETED`
 
-### Payments
+Cancellation and dispute states are also supported. Status changes are server-enforced through a centralized transition table.
 
-NowMyWork uses **Razorpay Live Mode** for client platform-fee collection. The server requires a Live Mode key (`rzp_live_*`), creates the order server-side, verifies the Razorpay checkout signature, and confirms the payment is captured for the expected INR amount before recording payment status.
+## Payments — Razorpay Live Mode only
 
-Marketplace fees are configuration-driven:
+NowMyWork uses **Razorpay Live Mode** for client platform-fee collection. The server rejects Test Mode keys and requires `RAZORPAY_KEY_ID` to begin with `rzp_live_`.
+
+The payment flow:
+
+1. Server validates the authenticated client and the assigned project.
+2. Server creates a Razorpay order for the configured client platform fee.
+3. Checkout uses the server-created order ID.
+4. The client callback is verified server-side using the Razorpay signature and a server-side payment fetch.
+5. Razorpay webhook events update the stored payment state idempotently.
+
+Webhook events are protected with a separate `RAZORPAY_WEBHOOK_SECRET` and the Razorpay event ID is used for duplicate-event protection.
+
+Marketplace fee configuration:
 
 - `CLIENT_FEE_PERCENT` — default 5%
 - `FREELANCER_FEE_PERCENT` — default 10%
 
-These percentages describe platform fees, not guaranteed profit. Live freelancer payouts/transfers, settlement reconciliation and production dispute handling are not yet complete.
+These are platform-fee percentages, not guaranteed profit. Freelancer payout/transfer settlement is not automated by this checkout integration yet.
 
-## Server environment
+## Environment variables
 
-Copy `.env.example` to `.env.local` and fill the required production values.
+Copy `.env.example` to `.env.local` and fill the required values.
 
-For Vercel Production, configure:
+For Vercel Production configure the Firebase browser/server variables plus:
 
-- `RAZORPAY_KEY_ID` — **Live Mode** key beginning with `rzp_live_`
+- `RAZORPAY_KEY_ID` — Live Mode key beginning with `rzp_live_`
 - `RAZORPAY_KEY_SECRET` — matching Live Mode secret
+- `RAZORPAY_WEBHOOK_SECRET` — separate secret configured for the Razorpay Live webhook
+- `CLIENT_FEE_PERCENT`
+- `FREELANCER_FEE_PERCENT`
+- `MATCH_CANDIDATE_LIMIT`
 
-The server rejects Test Mode keys. Never commit Firebase service-account private keys or payment secrets.
+Never commit Firebase private keys or payment secrets.
 
 ## Local development
 
@@ -110,23 +124,23 @@ npm run build
 1. Enable Firebase Authentication with Email/Password and Google.
 2. Create the Cloud Firestore database.
 3. Register the web app and configure `NEXT_PUBLIC_FIREBASE_*` variables.
-4. Create a Firebase service account for server-side Admin SDK use and put its values only in server environment variables.
+4. Create a Firebase service account and keep its values only in server environment variables.
 5. Publish `firestore.rules`.
 6. Add the production site domain to Firebase Authentication authorized domains.
 
-## Razorpay Live Mode setup
+Client job, offer, notification, message, profile and payment-session writes are server-controlled. Firestore rules block direct writes for these marketplace collections.
 
-1. Activate Live Mode in the Razorpay Dashboard and generate the Live API key pair.
-2. Put the Live key ID and Live key secret into Vercel Production environment variables.
-3. `RAZORPAY_KEY_ID` must begin with `rzp_live_`; Test Mode keys are rejected by the application.
-4. Redeploy the production deployment after changing the environment variables.
-5. Configure and verify Razorpay webhook handling before relying on asynchronous payment events in production.
+## Razorpay Live webhook setup
 
-Razorpay Standard Checkout orders are created on the server, and successful payments are verified on the server before NowMyWork records the payment. Live marketplace transfers/payouts require the appropriate Razorpay marketplace/transfer setup and are separate from client checkout collection.
+Configure the Live webhook endpoint:
 
-## Data model currently used
+`https://nowmywork.com/api/payments/webhook`
 
-The working MVP uses Firestore collections rather than Prisma/PostgreSQL. Existing collections include:
+Use the same `RAZORPAY_WEBHOOK_SECRET` value in the Razorpay Live webhook configuration and Vercel Production environment. Subscribe to the payment events needed by the current flow, including captured, authorized, failed and refunded events.
+
+Razorpay webhook signatures must be calculated from the raw request body. Duplicate events should be handled using the unique webhook event ID, and webhook processing must not assume events always arrive in order.
+
+## Firestore collections
 
 - `users/{uid}` — identity and role
 - `clients/{uid}` — client profile
@@ -136,20 +150,22 @@ The working MVP uses Firestore collections rather than Prisma/PostgreSQL. Existi
 - `notifications/{id}` — in-app notifications
 - `messages/{id}` — project-specific communication
 - `paymentSessions/{jobId}` — payment state
-- `paymentParties/{id}` and `contactUnlocks/{jobId}` — protected payment/contact workflow
+- `paymentParties/{id}` — server-side participant contact data
+- `contactUnlocks/{jobId}` — server-generated contact access data
+- `paymentWebhookEvents/{hash}` — webhook idempotency/audit records
 
 ## Security model
 
-Sensitive marketplace actions are server-controlled with Firebase Admin token verification and role checks. The browser is not trusted for roles, project ownership, assignment results, fee calculation or payment verification.
+Sensitive marketplace actions are server-controlled with Firebase Admin token verification and explicit role checks. The browser is not trusted for roles, project ownership, assignment results, fee calculation or payment verification.
 
-Offer acceptance and project status changes are validated against current database state. Matching and job creation APIs perform runtime validation before writes.
+Firestore rules block direct marketplace writes, keep freelancer profiles private to their owners, and protect contact data behind paid-project access.
 
 ## Branding
 
 - `icon.png` — transparent-background NowMyWork icon
 - `logo.png` — white-background NowMyWork logo
 
-The app uses these repository assets directly rather than remote GitHub image URLs for product UI.
+The app uses these repository assets directly.
 
 ## SEO
 
@@ -157,10 +173,10 @@ The public site includes metadata, sitemap and robots configuration. Authenticat
 
 ## Testing and CI
 
-GitHub Actions is configured in `.github/workflows/ci.yml` to run dependency installation, TypeScript checking, unit tests and a production build on pushes and pull requests targeting `main`.
+GitHub Actions runs dependency installation, TypeScript checking, unit tests and the production build on pushes and pull requests targeting `main`.
+
+Current unit coverage includes job state transitions, matching rules and Razorpay Live-key enforcement.
 
 ## Production status
 
-The client-side Razorpay checkout path is configured for Live Mode and explicitly rejects Test Mode keys. A full public marketplace launch still requires production-grade freelancer payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
-
-<!-- CI trigger: verify the current main branch build. -->
+The current repository has a verified production build and Live Mode payment integration for the client platform fee. A full marketplace launch still needs production-grade freelancer payout/transfer settlement, refund workflow UI, milestone payments, reviews/reliability calculations from completed history, disputes/admin case management, richer client settings, external notifications, file storage, rate limiting/WAF strategy and end-to-end browser testing.

@@ -25,19 +25,22 @@ export async function PUT(request: NextRequest) {
     const parsed = freelancerProfileSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: 'Invalid freelancer profile.', issues: parsed.error.flatten() }, { status: 400 });
 
-    const existing = await adminDb().collection('freelancers').doc(user.uid).get();
+    const db = adminDb();
+    const ref = db.collection('freelancers').doc(user.uid);
+    const existing = await ref.get();
+    const previous = existing.data() ?? {};
     const profile = {
       userId: user.uid,
-      displayName: existing.data()?.displayName ?? user.email?.split('@')[0] ?? 'Freelancer',
-      rating: typeof existing.data()?.rating === 'number' ? existing.data()?.rating : 0,
-      completedJobs: typeof existing.data()?.completedJobs === 'number' ? existing.data()?.completedJobs : 0,
-      completionRate: typeof existing.data()?.completionRate === 'number' ? existing.data()?.completionRate : 100,
-      cancellationRate: typeof existing.data()?.cancellationRate === 'number' ? existing.data()?.cancellationRate : 0,
-      responseRate: typeof existing.data()?.responseRate === 'number' ? existing.data()?.responseRate : 50,
+      displayName: String(previous.displayName ?? user.email?.split('@')[0] ?? 'Freelancer'),
+      rating: typeof previous.rating === 'number' ? previous.rating : 0,
+      completedJobs: typeof previous.completedJobs === 'number' ? previous.completedJobs : 0,
+      completionRate: typeof previous.completionRate === 'number' ? previous.completionRate : null,
+      cancellationRate: typeof previous.cancellationRate === 'number' ? previous.cancellationRate : null,
+      responseRate: typeof previous.responseRate === 'number' ? previous.responseRate : null,
       ...parsed.data,
       updatedAt: new Date(),
     };
-    await adminDb().collection('freelancers').doc(user.uid).set(profile, { merge: true });
+    await ref.set(profile, { merge: true });
     return NextResponse.json({ profile });
   } catch (error) {
     const result = errorResponse(error);

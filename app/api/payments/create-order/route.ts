@@ -1,120 +1,165 @@
+import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { Timestamp } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/admin';
 import { calculateFee, clientFeePercent, freelancerFeePercent } from '@/lib/fees';
 import { getLiveRazorpayCredentials } from '@/lib/razorpay';
-import { getServerDocument, setServerDocument, verifyFirebaseIdToken } from '@/lib/server-firestore';
+import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
-function jsonError(message: string, status = 400) { return NextResponse.json({ error: message }, { status }); }
+
+type StoredSession = Record<string, unknown>;
+
+function jsonError(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+function isRecentTimestamp(value: unknown, maxAgeMs: number) {
+  return value instanceof Timestamp && Date.now() - value.toMillis() < maxAgeMs;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const authorization = request.headers.get('authorization') ?? '';
-    if (!authorization.startsWith('Bearer ')) return jsonError('Sign in is required.', 401);
-    const token = await verifyFirebaseIdToken(authorization.slice(7));
-    const body = await request.json() as { jobId?: string; role?: 'CLIENT' | 'FREELANCER'; phone?: string };
-    if (!body.jobId || body.role !== 'CLIENT') return jsonError('Only the client pays the upfront platform fee.');
-
-    const jobResult = await getServerDocument<Record<string, unknown>>(`jobs/${body.jobId}`);
-    if (!jobResult.exists || !jobResult.data) return jsonError('Project not found.', 404);
-    const job = jobResult.data;
-    const clientId = String(job.clientId ?? '');
-    const freelancerId = String(job.assignedToId ?? '');
-    if (!['ASSIGNED', 'IN_PROGRESS'].includes(String(job.status ?? ''))) return jsonError('Payment is available after the project is assigned.');
-    if (token.uid !== clientId) return jsonError('You are not the client for this project.', 403);
-
-    const finalAmount = Number(job.budget ?? 0);
-    if (!Number.isFinite(finalAmount) || finalAmount <= 0) return jsonError('Project amount is invalid.');
-
-    const clientPercent = clientFeePercent();
-    const freelancerPercent = freelancerFeePercent();
-    const clientFee = calculateFee(finalAmount, clientPercent);
-    const freelancerFee = calculateFee(finalAmount, freelancerPercent);
-
-    const sessionPath = `paymentSessions/${body.jobId}`;
-    const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
-    const current = sessionResult.data ?? {};
-    const now = new Date();
-    const session = {
-      jobId: body.jobId,
-      clientId,
-      freelancerId,
-      finalAmount,
-      clientFee,
-      freelancerFee,
-      clientFeePercent: clientPercent,
-      freelancerFeePercent: freelancerPercent,
-      currency: 'INR',
-      clientPaymentStatus: current.clientPaymentStatus ?? 'PENDING',
-      freelancerPaymentStatus: current.freelancerPaymentStatus ?? 'PAYOUT_PENDING',
-      clientPaymentId: current.clientPaymentId ?? null,
-      clientOrderId: current.clientOrderId ?? null,
-      freelancerPaymentId: current.freelancerPaymentId ?? null,
-      freelancerOrderId: current.freelancerOrderId ?? null,
-      contactsUnlocked: current.contactsUnlocked ?? false,
-      createdAt: sessionResult.exists ? (current.createdAt ?? now) : now,
-      updatedAt: now,
-    };
-
-    if (session.clientPaymentStatus === 'PAID') {
-      return NextResponse.json({ alreadyPaid: true, contactsUnlocked: Boolean(session.contactsUnlocked), fee: clientFee, currency: 'INR' });
-    }
-
-    const phone = body.phone?.trim() || token.phoneNumber || null;
-    await setServerDocument(`paymentParties/${body.jobId}_${token.uid}`, {
-      jobId: body.jobId,
-      uid: token.uid,
-      role: 'CLIENT',
-      email: token.email ?? null,
-      phone,
-      updatedAt: now,
-    });
-
-    if (!sessionResult.exists) await setServerDocument(sessionPath, session);
-    else await setServerDocument(sessionPath, session, sessionResult.updateTime);
+    const user = await requireUser(request);
+    assertRole(user.role, 'CLIENT');
+    const body = await request.json() as { jobId?: string; phone?: string };
+    const jobId = body.jobId?.trim();
+    if (!jobId) return jsonError('Project ID is required.');
 
     const { keyId, keySecret } = getLiveRazorpayCredentials();
-    const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const receipt = `nmw_${body.jobId.slice(-12)}_client`;
+    const db = adminDb();
+    const jobRef = db.collection('jobs').doc(jobId);
+    const sessionRef = db.collection('paymentSessions').doc(jobId);
+    const now = Timestamp.now();
+    const lockId = randomUUID();
 
-    const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
-      method: 'POST',
-      headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        amount: clientFee * 100,
+    const state = await db.runTransaction(async (transaction) => {
+      const jobSnapshot = await transaction.get(jobRef);
+      const sessionSnapshot = await transaction.get(sessionRef);
+      if (!jobSnapshot.exists) throw new Error('JOB_NOT_FOUND');
+      const job = jobSnapshot.data()!;
+      if (job.clientId !== user.uid) throw new Error('FORBIDDEN');
+      if (!['ASSIGNED', 'IN_PROGRESS'].includes(String(job.status ?? ''))) throw new Error('JOB_NOT_PAYABLE');
+
+      const current = (sessionSnapshot.data() ?? {}) as StoredSession;
+      if (current.clientPaymentStatus === 'PAID') {
+        return { kind: 'PAID' as const, fee: Number(current.clientFee ?? 0), contactsUnlocked: Boolean(current.contactsUnlocked) };
+      }
+      if (typeof current.clientOrderId === 'string' && current.clientOrderId) {
+        return { kind: 'ORDER' as const, orderId: current.clientOrderId, fee: Number(current.clientFee ?? 0), finalAmount: Number(current.finalAmount ?? job.budget), freelancerFee: Number(current.freelancerFee ?? 0) };
+      }
+      if (isRecentTimestamp(current.orderCreationLockedAt, 2 * 60 * 1000)) throw new Error('ORDER_IN_PROGRESS');
+
+      const finalAmount = Number(job.budget ?? 0);
+      if (!Number.isFinite(finalAmount) || finalAmount <= 0) throw new Error('INVALID_AMOUNT');
+      const clientPercent = clientFeePercent();
+      const freelancerPercent = freelancerFeePercent();
+      const clientFee = calculateFee(finalAmount, clientPercent);
+      const freelancerFee = calculateFee(finalAmount, freelancerPercent);
+      const session = {
+        jobId,
+        clientId: user.uid,
+        freelancerId: String(job.assignedToId ?? ''),
+        finalAmount,
+        clientFee,
+        freelancerFee,
+        clientFeePercent: clientPercent,
+        freelancerFeePercent: freelancerPercent,
         currency: 'INR',
-        receipt,
-        notes: {
-          platform: 'NowMyWork',
-          job_id: body.jobId,
-          side: 'CLIENT',
-          platform_fee_percent: String(clientPercent),
-          final_project_amount: String(finalAmount),
-        },
-      }),
+        clientPaymentStatus: current.clientPaymentStatus ?? 'PENDING',
+        freelancerPaymentStatus: current.freelancerPaymentStatus ?? 'PAYOUT_PENDING',
+        clientPaymentId: current.clientPaymentId ?? null,
+        clientOrderId: current.clientOrderId ?? null,
+        freelancerPaymentId: current.freelancerPaymentId ?? null,
+        freelancerOrderId: current.freelancerOrderId ?? null,
+        contactsUnlocked: current.contactsUnlocked ?? false,
+        createdAt: current.createdAt ?? now,
+        updatedAt: now,
+        orderCreationLock: lockId,
+        orderCreationLockedAt: now,
+      };
+      transaction.set(sessionRef, session, { merge: true });
+      return { kind: 'CREATE' as const, clientFee, freelancerFee, finalAmount };
     });
 
-    if (!razorpayResponse.ok) {
-      console.error('Razorpay Live order creation failed:', await razorpayResponse.text());
-      return jsonError('Razorpay could not create the payment order.', 502);
+    if (state.kind === 'PAID') {
+      return NextResponse.json({ alreadyPaid: true, contactsUnlocked: state.contactsUnlocked, fee: state.fee, currency: 'INR' });
+    }
+    if (state.kind === 'ORDER') {
+      return NextResponse.json({ orderId: state.orderId, amount: state.fee * 100, currency: 'INR', keyId, fee: state.fee, finalAmount: state.finalAmount, freelancerFee: state.freelancerFee, clientFeePercent: clientFeePercent(), freelancerFeePercent: freelancerFeePercent() });
     }
 
-    const order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
-    const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
-    await setServerDocument(sessionPath, { ...(latest.data ?? session), updatedAt: new Date(), clientOrderId: order.id }, latest.updateTime);
+    const phone = body.phone?.trim() || user.token.phone_number || null;
+    await db.collection('paymentParties').doc(`${jobId}_${user.uid}`).set({
+      jobId,
+      uid: user.uid,
+      role: 'CLIENT',
+      email: user.email,
+      phone,
+      updatedAt: now,
+    }, { merge: true });
+
+    const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    const receipt = `nmw_${jobId.slice(-12)}_${Date.now().toString(36)}`;
+    let order: { id: string; amount: number; currency: string };
+    try {
+      const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: { authorization: `Basic ${credentials}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          amount: state.clientFee * 100,
+          currency: 'INR',
+          receipt,
+          notes: {
+            platform: 'NowMyWork',
+            job_id: jobId,
+            side: 'CLIENT',
+            platform_fee_percent: String(clientFeePercent()),
+            final_project_amount: String(state.finalAmount),
+          },
+        }),
+      });
+      if (!razorpayResponse.ok) {
+        console.error('Razorpay Live order creation failed:', await razorpayResponse.text());
+        throw new Error('RAZORPAY_ORDER_FAILED');
+      }
+      order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
+    } catch (error) {
+      await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(sessionRef);
+        if (snapshot.data()?.orderCreationLock === lockId) transaction.update(sessionRef, { orderCreationLock: null, orderCreationLockedAt: null, updatedAt: Timestamp.now() });
+      });
+      if (error instanceof Error && error.message === 'RAZORPAY_ORDER_FAILED') return jsonError('Razorpay could not create the payment order.', 502);
+      throw error;
+    }
+
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(sessionRef);
+      if (snapshot.data()?.orderCreationLock !== lockId) throw new Error('PAYMENT_SESSION_CHANGED');
+      transaction.update(sessionRef, { clientOrderId: order.id, orderCreationLock: null, orderCreationLockedAt: null, updatedAt: Timestamp.now() });
+    });
 
     return NextResponse.json({
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       keyId,
-      fee: clientFee,
-      finalAmount,
-      freelancerFee,
-      clientFeePercent: clientPercent,
-      freelancerFeePercent: freelancerPercent,
+      fee: state.clientFee,
+      finalAmount: state.finalAmount,
+      freelancerFee: state.freelancerFee,
+      clientFeePercent: clientFeePercent(),
+      freelancerFeePercent: freelancerFeePercent(),
     });
   } catch (error) {
-    console.error(error);
-    return jsonError(error instanceof Error ? error.message : 'Could not create payment order.', 500);
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'JOB_NOT_FOUND') return jsonError('Project not found.', 404);
+    if (message === 'FORBIDDEN') return jsonError('You are not the client for this project.', 403);
+    if (message === 'JOB_NOT_PAYABLE') return jsonError('Payment is available after the project is assigned.', 409);
+    if (message === 'ORDER_IN_PROGRESS') return jsonError('A payment order is already being prepared. Please try again shortly.', 409);
+    if (message === 'INVALID_AMOUNT') return jsonError('Project amount is invalid.');
+    if (message === 'PAYMENT_SESSION_CHANGED') return jsonError('The payment session changed while the order was being prepared. Please retry.', 409);
+    const result = errorResponse(error);
+    console.error('POST /api/payments/create-order', error);
+    return NextResponse.json({ error: result.message }, { status: result.status });
   }
 }

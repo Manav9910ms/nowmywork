@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const prioritySchema = z.enum(['QUALITY', 'BALANCED', 'SPEED_BUDGET']);
 
 const listSchema = z.array(z.string().trim().min(1)).max(30);
+const futureDate = (value: string) => {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) && date.getTime() > Date.now();
+};
 
 export const createJobSchema = z.object({
   title: z.string().trim().min(5).max(120),
@@ -12,7 +16,7 @@ export const createJobSchema = z.object({
   skills: listSchema.min(1),
   techStack: listSchema,
   priority: prioritySchema,
-  deadline: z.string().datetime().optional().nullable(),
+  deadline: z.string().datetime().refine(futureDate, 'Deadline must be in the future.').optional().nullable(),
 });
 
 export const freelancerProfileSchema = z.object({

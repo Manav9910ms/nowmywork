@@ -9,6 +9,8 @@ import styles from './client-dashboard.module.css';
 type Props = { job: JobRecord };
 type Match = { id: string; score: number; skills: string[]; techStack: string[]; availability: string; experience?: number | null; completedJobs: number; reasons?: MatchReason[] };
 
+const matchableStatuses = ['OPEN', 'MATCHING', 'OFFERED'];
+
 export default function MatchResults({ job }: Props) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,7 @@ export default function MatchResults({ job }: Props) {
   const [count, setCount] = useState(0);
 
   async function findMatches() {
+    if (!matchableStatuses.includes(job.status)) return;
     setLoading(true); setError(''); setMessage('');
     try {
       const user = auth.currentUser;
@@ -33,9 +36,11 @@ export default function MatchResults({ job }: Props) {
     } finally { setLoading(false); }
   }
 
+  const canMatch = matchableStatuses.includes(job.status);
+
   return (
     <div className={styles.matchPanel}>
-      <div className={styles.matchHeader}><div><div className="eyebrow muted">PRIVATE MATCHING</div><h4>{job.status === 'OFFERED' ? 'Private offers prepared' : 'Find eligible freelancers'}</h4></div><button className="secondary-btn" type="button" onClick={() => void findMatches()} disabled={loading || ['ASSIGNED','IN_PROGRESS','COMPLETED','CANCELLED'].includes(job.status)}>{loading ? 'Matching…' : loaded ? 'Rematch securely' : 'Find top matches →'}</button></div>
+      <div className={styles.matchHeader}><div><div className="eyebrow muted">PRIVATE MATCHING</div><h4>{job.status === 'OFFERED' ? 'Private offers prepared' : 'Find eligible freelancers'}</h4></div><button className="secondary-btn" type="button" onClick={() => void findMatches()} disabled={loading || !canMatch}>{loading ? 'Matching…' : loaded ? 'Rematch securely' : 'Find top matches →'}</button></div>
       {error && <div className={styles.error} role="alert">{error}</div>}
       {message && <div className={styles.success} role="status">{message}</div>}
       {loaded && count > 0 && <div className={styles.matchSummary}><strong>Top {count}</strong><span>Eligible freelancers have received private offers. Individual offer details stay private to them.</span></div>}
