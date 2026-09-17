@@ -5,11 +5,16 @@ import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
+type TimedOffer = {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+} & Record<string, unknown>;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request); assertRole(user.role, 'FREELANCER');
     const snapshot = await adminDb().collection('offers').where('freelancerId', '==', user.uid).get();
-    const offers = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    const offers = snapshot.docs.map((item): TimedOffer => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
     return NextResponse.json({ offers });
   } catch (error) { const result = errorResponse(error); console.error('GET /api/offers', error); return NextResponse.json({ error: result.message }, { status: result.status }); }
 }
