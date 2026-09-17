@@ -103,7 +103,8 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
         setMessage('Your 5% platform fee is already verified.');
         return;
       }
-      if (!orderData.orderId || !orderData.keyId) throw new Error('Razorpay order details are incomplete.');
+      if (!orderData.orderId || !orderData.keyId) throw new Error('Razorpay Live order details are incomplete.');
+      if (!orderData.keyId.startsWith('rzp_live_')) throw new Error('Razorpay Live Mode is required for payments.');
 
       await new Promise<void>((resolve, reject) => {
         const checkout = new window.Razorpay!({
@@ -111,7 +112,7 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
           amount: orderData.amount,
           currency: orderData.currency ?? 'INR',
           name: 'NowMyWork',
-          description: `5% platform fee · ${job.title}`,
+          description: `NowMyWork platform fee · ${job.title}`,
           order_id: orderData.orderId,
           prefill: { name: user.displayName ?? '', email: user.email ?? '', contact: phone },
           notes: { nowmywork_job_id: job.id, nowmywork_side: 'CLIENT', final_project_amount: String(finalAmount) },
@@ -199,8 +200,8 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
             {role === 'CLIENT' ? (
               <>
                 <strong>{clientPaid ? 'Your 5% fee is verified.' : `Pay your 5% fee · ₹${clientFee.toLocaleString('en-IN')}`}</strong>
-                <span>{clientPaid ? 'You have completed the upfront platform-fee step.' : 'Test mode: Razorpay will simulate the payment. No real money is deducted.'}</span>
-                <small className={styles.refundNote}>If your work request is rejected by NowMyWork, 100% of your platform fee will be refunded within 3 days. Don’t worry about your precious money.</small>
+                <span>{clientPaid ? 'You have completed the upfront platform-fee step.' : 'Secure payment through Razorpay. Your payment is verified on the NowMyWork server before access is unlocked.'}</span>
+                <small className={styles.refundNote}>If your work request is rejected by NowMyWork, 100% of your platform fee will be refunded within 3 days.</small>
               </>
             ) : (
               <>
@@ -211,7 +212,7 @@ export default function PaymentGate({ job, role }: { job: JobRecord; role: Role 
           </div>
           {role === 'CLIENT' && !clientPaid && <div className={styles.payActions}>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Mobile number (optional)" aria-label="Mobile number" />
-            <button type="button" className="primary-btn" disabled={busy} onClick={() => void payClientFee()}>{busy ? 'Opening payment…' : `Pay ₹${clientFee.toLocaleString('en-IN')} →`}</button>
+            <button type="button" className="primary-btn" disabled={busy} onClick={() => void payClientFee()}>{busy ? 'Opening secure payment…' : `Pay ₹${clientFee.toLocaleString('en-IN')} →`}</button>
           </div>}
         </div>
       ) : (
