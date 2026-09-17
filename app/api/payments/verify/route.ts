@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateFee, freelancerFeePercent } from '@/lib/fees';
+import { getLiveRazorpayCredentials } from '@/lib/razorpay';
 import { getServerDocument, setServerDocument, verifyFirebaseIdToken } from '@/lib/server-firestore';
 
 export const runtime = 'nodejs';
@@ -15,12 +16,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as { jobId?: string; role?: 'CLIENT' | 'FREELANCER'; razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string };
     if (!body.jobId || body.role !== 'CLIENT' || !body.razorpayOrderId || !body.razorpayPaymentId || !body.razorpaySignature) return jsonError('Only the client upfront payment can be verified here.');
 
-    const keyId = process.env.RAZORPAY_KEY_ID; const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) return jsonError('Razorpay test keys are not configured on the server.', 500);
-    const sessionPath = `paymentSessions/${body.jobId}`; const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
+    const { keyId, keySecret } = getLiveRazorpayCredentials();
+    const sessionPath = `paymentSessions/${body.jobId}`;
+    const sessionResult = await getServerDocument<Record<string, unknown>>(sessionPath);
     if (!sessionResult.exists || !sessionResult.data) return jsonError('Payment session not found.', 404);
     const session = sessionResult.data;
     if (String(session.clientId ?? '') !== token.uid) return jsonError('You are not authorized to verify this payment.', 403);
+
     const expectedOrderId = String(session.clientOrderId ?? '');
     if (!expectedOrderId || expectedOrderId !== body.razorpayOrderId) return jsonError('Payment order does not match this project.', 400);
     if (!signaturesEqual(`${body.razorpayOrderId}|${body.razorpayPaymentId}`, body.razorpaySignature, keySecret)) return jsonError('Payment signature verification failed.', 400);
@@ -44,5 +46,8 @@ export async function POST(request: NextRequest) {
     const latest = await getServerDocument<Record<string, unknown>>(sessionPath);
     await setServerDocument(sessionPath, updatedSession, latest.updateTime);
     return NextResponse.json({ success: true, clientPaid: true, freelancerPaid: false, contactsUnlocked: true, freelancerFee, freelancerFeePercent: session.freelancerFeePercent ?? freelancerFeePercent() });
-  } catch (error) { console.error(error); return jsonError(error instanceof Error ? error.message : 'Could not verify payment.', 500); }
+  } catch (error) {
+    console.error(error);
+    return jsonError(error instanceof Error ? error.message : 'Could not verify payment.', 500);
+  }
 }
