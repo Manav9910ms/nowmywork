@@ -6,12 +6,17 @@ import { createJobSchema } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
+type TimedRecord = {
+  id: string;
+  updatedAt?: { toMillis?: () => number };
+} & Record<string, unknown>;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
     assertRole(user.role, 'CLIENT');
     const snapshot = await adminDb().collection('jobs').where('clientId', '==', user.uid).get();
-    const jobs = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => {
+    const jobs = snapshot.docs.map((item): TimedRecord => ({ id: item.id, ...item.data() })).sort((a, b) => {
       const left = a.updatedAt?.toMillis?.() ?? 0;
       const right = b.updatedAt?.toMillis?.() ?? 0;
       return right - left;
