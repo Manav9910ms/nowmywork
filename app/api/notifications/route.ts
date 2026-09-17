@@ -5,11 +5,16 @@ import { requireUser, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
+type TimedNotification = {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+} & Record<string, unknown>;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
     const snapshot = await adminDb().collection('notifications').where('userId', '==', user.uid).limit(50).get();
-    const notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    const notifications = snapshot.docs.map((doc): TimedNotification => ({ id: doc.id, ...doc.data() })).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
     return NextResponse.json({ notifications });
   } catch (error) {
     const result = errorResponse(error);
