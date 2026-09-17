@@ -22,7 +22,7 @@ NowMyWork is a freelance marketplace built around private matching instead of pr
 - Firestore Security Rules
 - Zod runtime validation
 - Rule-based, AI-ready matching engine
-- Razorpay Test Mode payment verification
+- Razorpay Live Mode client-fee payment flow
 - Vercel deployment
 
 This repository intentionally remains a modular monolith. The matching function is isolated so a future rules + historical outcomes + AI/ML ranker can replace the current scorer without redesigning the marketplace.
@@ -69,7 +69,7 @@ The candidate limit is configured with `MATCH_CANDIDATE_LIMIT` and defaults to 1
 
 ### Payments
 
-The current payment flow is **Razorpay Test Mode** only. The server creates the configured client platform-fee order and verifies the Razorpay signature plus captured amount with Razorpay before recording payment status.
+NowMyWork uses **Razorpay Live Mode** for client platform-fee collection. The server requires a Live Mode key (`rzp_live_*`), creates the order server-side, verifies the Razorpay checkout signature, and confirms the payment is captured for the expected INR amount before recording payment status.
 
 Marketplace fees are configuration-driven:
 
@@ -80,9 +80,14 @@ These percentages describe platform fees, not guaranteed profit. Live freelancer
 
 ## Server environment
 
-Copy `.env.example` to `.env.local` and fill only the values required by the active features.
+Copy `.env.example` to `.env.local` and fill the required production values.
 
-Never commit Firebase service-account private keys or payment secrets.
+For Vercel Production, configure:
+
+- `RAZORPAY_KEY_ID` — **Live Mode** key beginning with `rzp_live_`
+- `RAZORPAY_KEY_SECRET` — matching Live Mode secret
+
+The server rejects Test Mode keys. Never commit Firebase service-account private keys or payment secrets.
 
 ## Local development
 
@@ -108,6 +113,16 @@ npm run build
 4. Create a Firebase service account for server-side Admin SDK use and put its values only in server environment variables.
 5. Publish `firestore.rules`.
 6. Add the production site domain to Firebase Authentication authorized domains.
+
+## Razorpay Live Mode setup
+
+1. Activate Live Mode in the Razorpay Dashboard and generate the Live API key pair.
+2. Put the Live key ID and Live key secret into Vercel Production environment variables.
+3. `RAZORPAY_KEY_ID` must begin with `rzp_live_`; Test Mode keys are rejected by the application.
+4. Redeploy the production deployment after changing the environment variables.
+5. Configure and verify Razorpay webhook handling before relying on asynchronous payment events in production.
+
+Razorpay Standard Checkout orders are created on the server, and successful payments are verified on the server before NowMyWork records the payment. Live marketplace transfers/payouts require the appropriate Razorpay marketplace/transfer setup and are separate from client checkout collection.
 
 ## Data model currently used
 
@@ -144,8 +159,6 @@ The public site includes metadata, sitemap and robots configuration. Authenticat
 
 GitHub Actions is configured in `.github/workflows/ci.yml` to run dependency installation, TypeScript checking, unit tests and a production build on pushes and pull requests targeting `main`.
 
-Current unit coverage focuses on the matching engine. CI execution still needs to be observed in the GitHub Actions UI because the connected GitHub API currently reports zero workflow runs for this repository.
+## Production status
 
-## Not yet production-complete
-
-The following remain before a full marketplace launch: production-grade payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
+The client-side Razorpay checkout path is now configured for Live Mode and explicitly rejects Test Mode keys. A full public marketplace launch still requires production-grade freelancer payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
