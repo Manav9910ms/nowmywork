@@ -5,6 +5,11 @@ import { requireUser, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
+type TimedMessage = {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+} & Record<string, unknown>;
+
 async function getParticipantJob(jobId: string, uid: string) {
   const job = await adminDb().collection('jobs').doc(jobId).get();
   if (!job.exists) throw new Error('JOB_NOT_FOUND');
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
     if (!jobId) return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 });
     await getParticipantJob(jobId, user.uid);
     const snapshot = await adminDb().collection('messages').where('jobId', '==', jobId).limit(200).get();
-    const messages = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
+    const messages = snapshot.docs.map((doc): TimedMessage => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
     return NextResponse.json({ messages });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
