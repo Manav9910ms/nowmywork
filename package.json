@@ -22,6 +22,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "typescript": "latest",
+    "vite": "latest",
     "vitest": "latest"
   },
   "allowScripts": {
