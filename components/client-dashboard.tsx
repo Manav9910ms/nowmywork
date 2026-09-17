@@ -8,6 +8,7 @@ import MatchResults from './match-results';
 import styles from './client-dashboard.module.css';
 
 type Props = { user: NonNullable<typeof auth.currentUser> };
+type JobApiResponse = { id?: string; message?: string; error?: string };
 
 const priorityLabels: Record<JobPriority, { title: string; text: string }> = {
   QUALITY: { title: 'A — Quality First', text: 'Prioritize proven skill, quality and experience.' },
@@ -24,6 +25,23 @@ function formatDeadline(value?: string | null) {
   if (!value) return 'Duration based';
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date) : 'Duration based';
+}
+
+async function readApiResponse(response: Response): Promise<JobApiResponse> {
+  const body = await response.text();
+  if (!body.trim()) {
+    return response.ok
+      ? { message: 'Project posted.' }
+      : { error: `The server returned an empty response (${response.status}). Please try again.` };
+  }
+
+  try {
+    return JSON.parse(body) as JobApiResponse;
+  } catch {
+    return response.ok
+      ? { error: 'The server returned an invalid response. Please try again.' }
+      : { error: `The server returned an unexpected response (${response.status}). Please try again.` };
+  }
 }
 
 export default function ClientDashboard({ user }: Props) {
@@ -56,7 +74,14 @@ export default function ClientDashboard({ user }: Props) {
   useEffect(() => { void loadJobs(); }, [user.uid]);
 
   function resetForm() {
-    setTitle(''); setDescription(''); setBudget(''); setDurationDays('7'); setDeadline(''); setSkills(''); setTechStack(''); setPriority('BALANCED');
+    setTitle('');
+    setDescription('');
+    setBudget('');
+    setDurationDays('7');
+    setDeadline('');
+    setSkills('');
+    setTechStack('');
+    setPriority('BALANCED');
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -85,14 +110,21 @@ export default function ClientDashboard({ user }: Props) {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), description: description.trim(), budget: Math.round(amount), durationDays: days, deadline: deadlineDate ? deadlineDate.toISOString() : null, skills: skillList, techStack: stackList, priority }),
       });
-      const data = await response.json() as { error?: string };
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error ?? 'Could not post this project.');
-      resetForm(); setShowForm(false);
-      setSuccess('Your work is posted. NowMyWork can now match it to eligible freelancers.');
+      if (!data.id) {
+        setSuccess('Your project was accepted by the server. Refreshing your jobs…');
+      } else {
+        setSuccess('Your work is posted. NowMyWork can now match it to eligible freelancers.');
+      }
+      resetForm();
+      setShowForm(false);
       await loadJobs();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not post this job.');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   const openableStatuses = ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED', 'CANCELLED', 'DISPUTED'];
