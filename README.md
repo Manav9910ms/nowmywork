@@ -161,4 +161,6 @@ GitHub Actions is configured in `.github/workflows/ci.yml` to run dependency ins
 
 ## Production status
 
-The client-side Razorpay checkout path is now configured for Live Mode and explicitly rejects Test Mode keys. A full public marketplace launch still requires production-grade freelancer payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
+The client-side Razorpay checkout path is configured for Live Mode and explicitly rejects Test Mode keys. A full public marketplace launch still requires production-grade freelancer payout/transfer settlement, webhook-driven payment lifecycle and idempotency across all payment events, file upload/storage authorization, milestone payment orchestration, reviews/reliability calculations from completed history, disputes/admin case management, cancellation/refund workflows, richer client profile/settings, email/push notifications, full end-to-end/browser tests, rate limiting/WAF strategy, and an operational seed/demo environment.
+
+<!-- CI trigger: verify the current main branch build. -->
