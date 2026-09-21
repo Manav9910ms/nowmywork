@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import AuthCard from '@/components/auth-card';
 
-const brandIcon = '/icon.png';
+const brandIcon = '/icon.svg';
 
 export default function SignUpPage() {
   return (
