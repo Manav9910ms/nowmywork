@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   title: { default: 'NowMyWork — Work should find you.', template: '%s — NowMyWork' },
   description: 'A freelance marketplace that matches clients with the right freelancers instead of endless bidding.',
   icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png',
+    icon: 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png',
+    shortcut: 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png',
+    apple: 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png',
   },
-  openGraph: { title: 'NowMyWork — Work should find you.', description: 'Post the work. We find the people.', type: 'website', url: 'https://nowmywork.com', images: ['/logo.png'] },
+  openGraph: { title: 'NowMyWork — Work should find you.', description: 'Post the work. We find the people.', type: 'website', url: 'https://nowmywork.com', images: ['https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png'] },
   twitter: { card: 'summary', title: 'NowMyWork — Work should find you.', description: 'A freelance marketplace built around private matching.' },
 };
 
