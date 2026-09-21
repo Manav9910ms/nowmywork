@@ -12,7 +12,7 @@ import FreelancerOffers from '@/components/freelancer-offers';
 import NotificationsPanel from '@/components/notifications-panel';
 import styles from './dashboard.module.css';
 
-const brandIcon = '/icon.svg';
+const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
 type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
 type Counts = { users: number; freelancers: number; jobs: number; offers: number };
 
