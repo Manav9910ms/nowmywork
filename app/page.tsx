@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-const brandIcon = '/icon.png';
+const brandIcon = '/icon.svg';
 const brandLogo = '/logo.png';
 const steps = [
   { number: '01', title: 'Post the work', text: 'Describe the project, skills, budget, deadline, and the kind of freelancer you need.' },
