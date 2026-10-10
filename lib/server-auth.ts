@@ -21,14 +21,26 @@ export async function requireUser(request: NextRequest) {
   const userSnapshot = await adminDb().collection('users').doc(token.uid).get();
   if (!userSnapshot.exists) throw new Error('ACCOUNT_NOT_READY');
 
-  const role = userSnapshot.data()?.role;
+  const userData = userSnapshot.data()!;
+  const role = userData.role;
   if (typeof role !== 'string' || !roles.has(role as AppRole)) throw new Error('ACCOUNT_NOT_READY');
 
-  return { uid: token.uid, email: token.email ?? null, role: role as AppRole, token };
+  return {
+    uid: token.uid,
+    email: token.email ?? null,
+    role: role as AppRole,
+    freelancerApprovalStatus: typeof userData.freelancerApprovalStatus === 'string' ? userData.freelancerApprovalStatus : null,
+    token,
+  };
 }
 
 export function assertRole(role: AppRole, ...allowed: AppRole[]) {
   if (!allowed.includes(role)) throw new Error('FORBIDDEN');
+}
+
+export function assertFreelancerApproved(user: { role: AppRole; freelancerApprovalStatus?: string | null }) {
+  assertRole(user.role, 'FREELANCER');
+  if (user.freelancerApprovalStatus !== 'APPROVED') throw new Error('FREELANCER_NOT_APPROVED');
 }
 
 export function errorResponse(error: unknown) {
@@ -36,5 +48,6 @@ export function errorResponse(error: unknown) {
   if (message === 'UNAUTHENTICATED') return { status: 401, message: 'Sign in is required.' };
   if (message === 'ACCOUNT_NOT_READY') return { status: 401, message: 'Your NowMyWork account setup is incomplete. Please sign in again.' };
   if (message === 'FORBIDDEN') return { status: 403, message: 'You do not have permission for this action.' };
+  if (message === 'FREELANCER_NOT_APPROVED') return { status: 403, message: 'Your freelancer application is awaiting approval. Complete your profile and wait for the review before accessing freelancer features.' };
   return { status: 500, message: 'Something went wrong. Please try again.' };
 }
