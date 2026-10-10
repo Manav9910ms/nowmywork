@@ -123,7 +123,7 @@ export default function ClientDashboard({ user }: Props) {
   return (
     <section className={styles.shell}>
       <div className={styles.topRow}>
-        <div><div className="eyebrow muted">CLIENT WORKSPACE</div><h1 className={styles.heading}>Get the right person for the work.</h1><p className={styles.sub}>Post what you need. automatic matching is temporarily paused while the engine is redesigned.</p></div>
+        <div><div className="eyebrow muted">CLIENT WORKSPACE</div><h1 className={styles.heading}>Manage the work you want to get done.</h1><p className={styles.sub}>Post and organize your projects here. Freelancer matching is paused while we redesign the engine.</p></div>
         <button className="primary-btn" onClick={() => { setShowForm((value) => !value); setError(''); setSuccess(''); }}>{showForm ? 'Close form' : '+ Post work'}</button>
       </div>
       {success && <div className={styles.success} role="status">{success}</div>}
