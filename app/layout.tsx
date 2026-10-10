@@ -23,8 +23,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
-      <GoogleAnalytics gaId={googleAnalyticsId} />
+      <body>
+        {children}
+        <GoogleAnalytics gaId={googleAnalyticsId} />
+      </body>
     </html>
   );
 }
