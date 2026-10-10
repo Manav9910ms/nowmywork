@@ -91,10 +91,19 @@ export default function DashboardPage() {
         return;
       }
 
-      if (savedRole === 'FREELANCER' && data?.freelancerApprovalStatus !== 'APPROVED') {
-        // Keep the dashboard hidden until this freelancer application is approved.
-        router.replace('/freelancer/onboarding');
-        return;
+      if (savedRole === 'FREELANCER') {
+        const token = await currentUser.getIdToken();
+        const applicationResponse = await fetch('/api/profile/freelancer/application', {
+          headers: { authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const application = await applicationResponse.json() as { status?: string; error?: string };
+        if (!applicationResponse.ok) throw new Error(application.error ?? 'Could not verify your freelancer approval.');
+        if (application.status !== 'APPROVED') {
+          // The server reads approval from the admin-only request record.
+          router.replace('/freelancer/onboarding');
+          return;
+        }
       }
 
       setRoleError('');
