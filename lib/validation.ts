@@ -32,7 +32,7 @@ export const freelancerProfileSchema = z.object({
 
 const pastDate = (value: string) => {
   const date = new Date(`${value}T00:00:00.000Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value && date.getTime() < Date.now();
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value && value < new Date().toISOString().slice(0, 10);
 };
 
 const linkSchema = z.string().trim().url().max(500);
