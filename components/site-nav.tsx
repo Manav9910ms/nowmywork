@@ -46,7 +46,7 @@ export default function SiteNav() {
 
   return (
     <nav className="nav shell" aria-label="Main navigation">
-      <a className="brand" href="#top" aria-label="NowMyWork home">
+      <a className="brand" href="/" aria-label="NowMyWork home">
         <img
           src="https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png"
           alt=""
