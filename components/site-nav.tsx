@@ -1,13 +1,16 @@
 'use client';
 
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { auth, firebaseApp } from '@/lib/firebase';
+import { auth, db, firebaseApp } from '@/lib/firebase';
 import { logOut } from '@/lib/auth';
 
 export default function SiteNav() {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<'CLIENT' | 'FREELANCER' | 'ADMIN' | null>(null);
+  const [freelancerApprovalStatus, setFreelancerApprovalStatus] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState('');
@@ -20,12 +23,31 @@ export default function SiteNav() {
 
     return onAuthStateChanged(
       auth,
-      (currentUser) => {
+      async (currentUser) => {
         setUser(currentUser);
-        setAuthReady(true);
+        setAuthReady(false);
+        if (!currentUser) {
+          setRole(null);
+          setFreelancerApprovalStatus(null);
+          setAuthReady(true);
+          return;
+        }
+        try {
+          const snapshot = await getDoc(doc(db, 'users', currentUser.uid));
+          const savedRole = snapshot.data()?.role;
+          setRole(savedRole === 'CLIENT' || savedRole === 'FREELANCER' || savedRole === 'ADMIN' ? savedRole : null);
+          setFreelancerApprovalStatus(typeof snapshot.data()?.freelancerApprovalStatus === 'string' ? snapshot.data()?.freelancerApprovalStatus : null);
+        } catch {
+          setRole(null);
+          setFreelancerApprovalStatus(null);
+        } finally {
+          setAuthReady(true);
+        }
       },
       () => {
         setUser(null);
+        setRole(null);
+        setFreelancerApprovalStatus(null);
         setAuthReady(true);
       },
     );
@@ -65,8 +87,8 @@ export default function SiteNav() {
         {authReady && (
           user ? (
             <>
-              <Link className="secondary-btn dashboard-link" href="/dashboard">
-                Dashboard
+              <Link className="secondary-btn dashboard-link" href={role === 'FREELANCER' && freelancerApprovalStatus !== 'APPROVED' ? '/freelancer/onboarding' : '/dashboard'}>
+                {role === 'FREELANCER' && freelancerApprovalStatus !== 'APPROVED' ? 'Complete profile' : 'Dashboard'}
               </Link>
               <button
                 className="dark-btn"
