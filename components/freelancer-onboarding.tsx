@@ -20,7 +20,7 @@ type Application = {
   experience: number;
   submittedAt?: string | null;
 };
-type ApiData = { status?: ApplicationStatus; application?: Partial<Application> | null; reviewNote?: string; error?: string };
+type ApiData = { status?: ApplicationStatus; application?: Partial<Application> | null; reviewNote?: string; message?: string; error?: string };
 
 const emptyApplication: Application = {
   name: '',
@@ -215,7 +215,7 @@ export default function FreelancerOnboarding() {
             <li>Show or explain your relevant experience and a project or work sample.</li>
             <li>Email the video to <a href={`mailto:team@nowmywork.com?subject=${subject}`}>team@nowmywork.com</a> with the subject “Freelancer introduction video — {application.name || application.email}”.</li>
           </ol>
-          <p className={styles.onboardingText}>We aim to review freelancer applications within 3 days. Your account stays in pending status until an admin approves it.</p>
+          <p className={styles.onboardingText}>Our team will review your application within 3 days. Your account stays pending until an admin approves it.</p>
           <div className={styles.formActions}>
             <a className="primary-btn" href={`mailto:team@nowmywork.com?subject=${subject}`}>Email the video to the team →</a>
             <button className="secondary-btn" type="button" onClick={() => router.push('/')}>Back to homepage</button>
