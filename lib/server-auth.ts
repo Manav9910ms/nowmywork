@@ -38,9 +38,14 @@ export function assertRole(role: AppRole, ...allowed: AppRole[]) {
   if (!allowed.includes(role)) throw new Error('FORBIDDEN');
 }
 
-export function assertFreelancerApproved(user: { role: AppRole; freelancerApprovalStatus?: string | null }) {
+export async function assertFreelancerApproved(user: { uid: string; role: AppRole }) {
   assertRole(user.role, 'FREELANCER');
-  if (user.freelancerApprovalStatus !== 'APPROVED') throw new Error('FREELANCER_NOT_APPROVED');
+  // The approval request is writable only by the Admin SDK. Do not trust the
+  // browser-readable users document as the authoritative approval record.
+  const approval = await adminDb().collection('freelancerApprovalRequests').doc(user.uid).get();
+  if (!approval.exists || approval.data()?.status !== 'APPROVED') {
+    throw new Error('FREELANCER_NOT_APPROVED');
+  }
 }
 
 export function errorResponse(error: unknown) {
