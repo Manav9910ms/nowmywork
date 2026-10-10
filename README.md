@@ -178,7 +178,7 @@ The public site includes metadata, sitemap and robots configuration. Authenticat
 
 GitHub Actions runs dependency installation, TypeScript checking, unit tests and the production build on pushes and pull requests targeting `main`.
 
-Current unit coverage includes job state transitions, matching rules and Razorpay Live-key enforcement.
+Current unit coverage includes job state transitions, freelancer application validation and Razorpay Live-key enforcement. The removed matching scorer no longer has active code or tests.
 
 ## Production status
 
