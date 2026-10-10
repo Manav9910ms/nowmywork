@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const userData = userSnapshot.data() ?? {};
     const profile = profileSnapshot.data() ?? {};
     const approval = approvalSnapshot.data() ?? {};
-    const status = String(userData.freelancerApprovalStatus ?? approval.status ?? 'NOT_SUBMITTED');
+    const status = approvalSnapshot.exists ? String(approval.status ?? 'PENDING') : 'NOT_SUBMITTED';
     return NextResponse.json({
       status,
       reviewNote: typeof approval.reviewNote === 'string' ? approval.reviewNote : '',
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
       const userData = userSnapshot.data() ?? {};
       const approval = approvalSnapshot.data() ?? {};
-      const currentStatus = String(userData.freelancerApprovalStatus ?? approval.status ?? 'NOT_SUBMITTED');
+      const currentStatus = approvalSnapshot.exists ? String(approval.status ?? 'PENDING') : 'NOT_SUBMITTED';
       if (currentStatus === 'APPROVED') throw new Error('FREELANCER_ALREADY_APPROVED');
 
       const data = parsed.data;
