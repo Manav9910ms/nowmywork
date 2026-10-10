@@ -3,7 +3,7 @@
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth, firebaseApp } from '@/lib/firebase';
 import { logOut } from '@/lib/auth';
 
 export default function SiteNav() {
@@ -13,6 +13,11 @@ export default function SiteNav() {
   const [signOutError, setSignOutError] = useState('');
 
   useEffect(() => {
+    if (!firebaseApp) {
+      setAuthReady(true);
+      return;
+    }
+
     return onAuthStateChanged(
       auth,
       (currentUser) => {
