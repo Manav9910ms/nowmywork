@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
+    if (user.role === 'FREELANCER') await assertFreelancerApproved(user);
     const jobId = new URL(request.url).searchParams.get('jobId')?.trim();
     if (!jobId) return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 });
 
