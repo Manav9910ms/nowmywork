@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ jobId: string }> }) {
   try {
     const user = await requireUser(request);
-    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
+    if (user.role === 'FREELANCER') await assertFreelancerApproved(user);
     const { jobId } = await params;
     const body = await request.json() as { status?: string };
     const target = body.status;
