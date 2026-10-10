@@ -3,18 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { auth } from '@/lib/firebase';
-import { getClientJobs, parseList, type JobPriority, type JobRecord } from '@/lib/jobs';
-import MatchResults from './match-results';
+import { getClientJobs, parseList, type JobRecord } from '@/lib/jobs';
 import styles from './client-dashboard.module.css';
 
 type Props = { user: NonNullable<typeof auth.currentUser> };
 type JobApiResponse = { id?: string; message?: string; error?: string };
-
-const priorityLabels: Record<JobPriority, { title: string; text: string }> = {
-  QUALITY: { title: 'A — Quality First', text: 'Prioritize proven skill, quality and experience.' },
-  BALANCED: { title: 'B — Balanced', text: 'Balance quality, availability and budget.' },
-  SPEED_BUDGET: { title: 'C — Budget / Speed First', text: 'Prioritize availability, speed and cost.' },
-};
 
 function formatDate(job: JobRecord) {
   const date = job.createdAt?.toDate();
@@ -58,7 +51,6 @@ export default function ClientDashboard({ user }: Props) {
   const [deadline, setDeadline] = useState('');
   const [skills, setSkills] = useState('');
   const [techStack, setTechStack] = useState('');
-  const [priority, setPriority] = useState<JobPriority>('BALANCED');
 
   async function loadJobs() {
     setLoadingJobs(true);
@@ -81,7 +73,6 @@ export default function ClientDashboard({ user }: Props) {
     setDeadline('');
     setSkills('');
     setTechStack('');
-    setPriority('BALANCED');
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -108,14 +99,14 @@ export default function ClientDashboard({ user }: Props) {
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), budget: Math.round(amount), durationDays: days, deadline: deadlineDate ? deadlineDate.toISOString() : null, skills: skillList, techStack: stackList, priority }),
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), budget: Math.round(amount), durationDays: days, deadline: deadlineDate ? deadlineDate.toISOString() : null, skills: skillList, techStack: stackList, priority: 'BALANCED' }),
       });
       const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error ?? 'Could not post this project.');
       if (!data.id) {
         setSuccess('Your project was accepted by the server. Refreshing your jobs…');
       } else {
-        setSuccess('Your work is posted. NowMyWork can now match it to eligible freelancers.');
+        setSuccess('Your project is posted. Freelancer matching is paused while we redesign the engine.');
       }
       resetForm();
       setShowForm(false);
@@ -132,7 +123,7 @@ export default function ClientDashboard({ user }: Props) {
   return (
     <section className={styles.shell}>
       <div className={styles.topRow}>
-        <div><div className="eyebrow muted">CLIENT WORKSPACE</div><h1 className={styles.heading}>Get the right person for the work.</h1><p className={styles.sub}>Post what you need. NowMyWork handles the matching instead of making you manage a pile of proposals.</p></div>
+        <div><div className="eyebrow muted">CLIENT WORKSPACE</div><h1 className={styles.heading}>Get the right person for the work.</h1><p className={styles.sub}>Post what you need. automatic matching is temporarily paused while the engine is redesigned.</p></div>
         <button className="primary-btn" onClick={() => { setShowForm((value) => !value); setError(''); setSuccess(''); }}>{showForm ? 'Close form' : '+ Post work'}</button>
       </div>
       {success && <div className={styles.success} role="status">{success}</div>}
@@ -140,24 +131,23 @@ export default function ClientDashboard({ user }: Props) {
 
       {showForm && (
         <form className={styles.formCard} onSubmit={submit}>
-          <div className={styles.formIntro}><div><div className="eyebrow muted">NEW PROJECT</div><h2>Tell us what needs to get done.</h2></div><span>Private matching</span></div>
+          <div className={styles.formIntro}><div><div className="eyebrow muted">NEW PROJECT</div><h2>Tell us what needs to get done.</h2></div><span>Matching paused</span></div>
           <label>Project title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Build a modern SaaS dashboard" required /></label>
           <label>What do you need?<textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the outcome, scope and anything important for the freelancer to know." rows={5} required /></label>
           <div className={styles.twoCol}><label>Budget (₹)<input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="50000" type="number" min="1" step="1" required /></label><label>Duration (days)<input value={durationDays} onChange={(e) => setDurationDays(e.target.value)} type="number" min="1" step="1" required /></label></div>
           <label>Deadline (optional)<input value={deadline} onChange={(e) => setDeadline(e.target.value)} type="datetime-local"/><span className={styles.hint}>Leave blank to use the project duration. A deadline, when provided, must be in the future.</span></label>
           <div className={styles.twoCol}><label>Required skills<input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, UI design, TypeScript" required /></label><label>Tech stack<input value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder="Next.js, Firebase" /></label></div>
-          <p className={styles.hint}>Separate skills with commas. Required skills are hard eligibility requirements.</p>
-          <fieldset><legend>What matters most?</legend><div className={styles.priorityGrid}>{(Object.keys(priorityLabels) as JobPriority[]).map((key) => <button key={key} type="button" className={priority === key ? styles.prioritySelected : styles.priority} onClick={() => setPriority(key)}><strong>{priorityLabels[key].title}</strong><span>{priorityLabels[key].text}</span></button>)}</div></fieldset>
+          <p className={styles.hint}>Separate skills with commas. Freelancer matching will return after the redesigned engine is ready.</p>
           <div className={styles.formActions}><button type="button" className="secondary-btn" onClick={() => { resetForm(); setShowForm(false); }}>Cancel</button><button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Posting…' : 'Post work →'}</button></div>
         </form>
       )}
 
       <div className={styles.jobsHeader}><div><div className="eyebrow muted">YOUR JOBS</div><h2>Work you’ve posted.</h2></div><span>{jobs.length} {jobs.length === 1 ? 'project' : 'projects'}</span></div>
-      {loadingJobs ? <div className={styles.empty}>Loading your work…</div> : jobs.length === 0 ? <div className={styles.empty}><strong>Your first project starts here.</strong><p>Post a job and NowMyWork will have the information it needs to start matching.</p><button className="primary-btn" onClick={() => setShowForm(true)}>Post your first job →</button></div> : (
+      {loadingJobs ? <div className={styles.empty}>Loading your work…</div> : jobs.length === 0 ? <div className={styles.empty}><strong>Your first project starts here.</strong><p>Post your work to keep the requirements, budget, and project details organized. Matching is currently paused while we redesign it.</p><button className="primary-btn" onClick={() => setShowForm(true)}>Post your first job →</button></div> : (
         <div className={styles.jobsList}>{jobs.map((job) => <article key={job.id} className={styles.jobCard}>
           <div className={styles.jobMain}><div className={styles.jobMeta}><span>{job.status}</span><span>{formatDate(job)}</span></div><h3>{job.title}</h3><p>{job.description}</p><div className={styles.chips}>{job.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}{job.skills.length > 4 && <span>+{job.skills.length - 4}</span>}</div></div>
-          <div className={styles.jobAside}><strong>₹{job.budget.toLocaleString('en-IN')}</strong><span>{job.durationDays} days</span><span>{formatDeadline(job.deadline)}</span><span>{priorityLabels[job.priority].title.split(' — ')[0]} priority</span></div>
-          <div className={styles.matchWrap}><MatchResults job={job}/>{openableStatuses.includes(job.status) && <Link href={`/project/${job.id}`} className="secondary-btn">Open project →</Link>}</div>
+          <div className={styles.jobAside}><strong>₹{job.budget.toLocaleString('en-IN')}</strong><span>{job.durationDays} days</span><span>{formatDeadline(job.deadline)}</span></div>
+          <div className={styles.jobActions}><span className={styles.pausedNote}>Automatic matching is paused while we redesign it.</span>{openableStatuses.includes(job.status) && <Link href={`/project/${job.id}`} className="secondary-btn">Open project →</Link>}</div>
         </article>)}</div>
       )}
     </section>
