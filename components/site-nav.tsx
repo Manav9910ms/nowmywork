@@ -86,7 +86,7 @@ export default function SiteNav() {
       </div>
 
       {signOutError && (
-        <span className="sr-only" role="alert">
+        <span className="nav-error" role="alert">
           {signOutError}
         </span>
       )}
