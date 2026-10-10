@@ -1,6 +1,6 @@
 import Link from 'next/link';
+import SiteNav from '@/components/site-nav';
 
-const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
 const brandLogo = '/logo.png';
 const steps = [
   { number: '01', title: 'Post the work', text: 'Describe the project, skills, budget, deadline, and the kind of freelancer you need.' },
@@ -14,7 +14,7 @@ const features = [
   ['Clear fees', 'A simple transaction model keeps the platform aligned with successful work.'],
 ];
 export default function Home() { return <main>
-  <nav className="nav shell"><a className="brand" href="#top" aria-label="NowMyWork home"><img src={brandIcon} alt="" className="brand-logo"/><span>NowMyWork</span></a><div className="nav-links"><a href="#how">How it works</a><a href="#why">Why NowMyWork</a><a href="#start">Get started</a></div><div className="nav-actions"><Link className="ghost-btn" href="/signin">Sign in</Link><Link className="dark-btn" href="/signup">Join NowMyWork</Link></div></nav>
+  <SiteNav />
   <section id="top" className="hero shell"><div className="hero-copy"><div className="eyebrow"><span className="live-dot"/> A better way to freelance</div><h1>Work should find you.</h1><p className="hero-text">NowMyWork replaces endless freelance bidding with smart, private matching. Clients post once. The right freelancers get the opportunity. Work starts faster.</p><div className="hero-actions"><Link className="primary-btn" href="/signup">I need a freelancer <span>→</span></Link><Link className="secondary-btn" href="/signup">I want work <span>→</span></Link></div><div className="trust-row"><span>Built for</span><strong>Clients</strong><i>×</i><strong>Freelancers</strong></div></div>
     <div className="matching-card" aria-label="Example matching flow"><div className="card-topline"><span>LIVE MATCH</span><span>Job #NM-1042</span></div><div className="job-block"><div className="mini-label">PROJECT</div><h2>Build a modern SaaS dashboard</h2><div className="chips"><span>Next.js</span><span>TypeScript</span><span>UI/UX</span></div></div><div className="match-divider"/><div className="match-heading"><span>Top matches</span><strong>10</strong></div><div className="freelancer-list">{[['A','Alex Morgan','98% match','Quality'],['S','Sam Patel','95% match','Balanced'],['R','Riya Sharma','93% match','Fast']].map(([initial,name,score,mode]) => <div className="freelancer" key={name}><div className="avatar">{initial}</div><div className="freelancer-main"><strong>{name}</strong><span>{score}</span></div><span className="mode-pill">{mode}</span></div>)}</div><div className="card-note">Private offer sent · waiting for acceptance</div></div>
   </section>
