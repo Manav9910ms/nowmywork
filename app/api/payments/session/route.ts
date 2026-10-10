@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/admin';
 import { clientFeePercent, freelancerFeePercent } from '@/lib/fees';
-import { requireUser } from '@/lib/server-auth';
+import { requireUser, assertFreelancerApproved } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
+    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
     const jobId = new URL(request.url).searchParams.get('jobId')?.trim();
     if (!jobId) return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 });
 
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    const status = message === 'UNAUTHENTICATED' || message === 'ACCOUNT_NOT_READY' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
-    return NextResponse.json({ error: status === 401 ? 'Sign in is required.' : status === 403 ? 'You do not have access to this project.' : 'Could not load payment status.' }, { status });
+    const status = message === 'UNAUTHENTICATED' || message === 'ACCOUNT_NOT_READY' ? 401 : message === 'FORBIDDEN' || message === 'FREELANCER_NOT_APPROVED' ? 403 : 500;
+    return NextResponse.json({ error: status === 401 ? 'Sign in is required.' : status === 403 ? (message === 'FREELANCER_NOT_APPROVED' ? 'Your freelancer application is awaiting approval.' : 'You do not have access to this project.') : 'Could not load payment status.' }, { status });
   }
 }
