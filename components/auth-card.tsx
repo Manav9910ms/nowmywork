@@ -101,7 +101,12 @@ export default function AuthCard({ mode }: Props) {
   }, []);
 
   async function finishAuth(account: Awaited<ReturnType<typeof signUpWithEmail>>, selectedRole?: AccountRole) {
-    await syncAccount(account, selectedRole);
+    return syncAccount(account, selectedRole);
+  }
+
+  function goToWorkspace(role: AccountRole) {
+    router.push(role === 'FREELANCER' ? '/freelancer/onboarding' : '/dashboard');
+    router.refresh();
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -118,9 +123,8 @@ export default function AuthCard({ mode }: Props) {
       const account = signup
         ? await signUpWithEmail(email.trim(), password, name.trim())
         : await signInWithEmail(email.trim(), password);
-      await finishAuth(account, signup ? role : undefined);
-      router.push('/dashboard');
-      router.refresh();
+      const synced = await finishAuth(account, signup ? role : undefined);
+      goToWorkspace(synced.user.role);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -134,9 +138,8 @@ export default function AuthCard({ mode }: Props) {
     setBusy(true);
     try {
       const account = await signInWithGoogle();
-      await finishAuth(account, signup ? role : undefined);
-      router.push('/dashboard');
-      router.refresh();
+      const synced = await finishAuth(account, signup ? role : undefined);
+      goToWorkspace(synced.user.role);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
