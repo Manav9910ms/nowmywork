@@ -1,7 +1,7 @@
 import SiteNav from '@/components/site-nav';
 import HomepageActions from '@/components/homepage-actions';
 
-const brandLogo = '/logo.png';
+const brandLogo = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
 const steps = [
   { number: '01', title: 'Post the work', text: 'Describe the project, skills, budget, deadline, and the kind of freelancer you need.' },
   { number: '02', title: 'We match it', text: 'NowMyWork scores eligible freelancers and privately sends the opportunity to the best matches.' },
