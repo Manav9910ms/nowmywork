@@ -21,7 +21,7 @@ async function getParticipantJob(jobId: string, uid: string) {
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
+    if (user.role === 'FREELANCER') await assertFreelancerApproved(user);
     const jobId = new URL(request.url).searchParams.get('jobId')?.trim();
     if (!jobId) return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 });
     await getParticipantJob(jobId, user.uid);
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
+    if (user.role === 'FREELANCER') await assertFreelancerApproved(user);
     const body = await request.json() as { jobId?: string; text?: string };
     const jobId = body.jobId?.trim();
     const text = body.text?.trim();
