@@ -7,9 +7,9 @@ service cloud.firestore {
     function userRole(uid) { return get(/databases/$(database)/documents/users/$(uid)).data.role; }
 
     match /users/{uid} {
-      allow create: if owns(uid) && request.resource.data.uid == uid && request.resource.data.role in ['CLIENT', 'FREELANCER'];
+      allow create: if owns(uid) && request.resource.data.uid == uid && request.resource.data.role in ['CLIENT', 'FREELANCER'] && !('freelancerApprovalStatus' in request.resource.data);
       allow read: if owns(uid);
-      allow update: if owns(uid) && request.resource.data.uid == resource.data.uid && request.resource.data.role == resource.data.role;
+      allow update: if owns(uid) && request.resource.data.uid == resource.data.uid && request.resource.data.role == resource.data.role && ((!('freelancerApprovalStatus' in resource.data) && !('freelancerApprovalStatus' in request.resource.data)) || (('freelancerApprovalStatus' in resource.data) && request.resource.data.freelancerApprovalStatus == resource.data.freelancerApprovalStatus));
       allow delete: if false;
     }
 

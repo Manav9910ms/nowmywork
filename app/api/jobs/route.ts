@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
       currency: 'INR',
       status: 'OPEN',
       assignedToId: null,
-      matchingVersion: 1,
       createdAt: now,
       updatedAt: now,
     });

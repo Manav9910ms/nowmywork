@@ -76,3 +76,12 @@
   .matchHeader button { width: 100%; }
   .matchCard { grid-template-columns: 35px 1fr auto; }
 }
+
+.onboardingText { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.videoSteps { margin: 0; padding-left: 22px; display: grid; gap: 10px; line-height: 1.65; font-size: 14px; }
+.videoSteps a { text-decoration: underline; text-underline-offset: 3px; font-weight: 700; }
+.jobActions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+.pausedNote { color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .jobActions { grid-column: auto; align-items: flex-start; flex-direction: column; }
+}

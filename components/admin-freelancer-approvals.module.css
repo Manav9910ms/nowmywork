@@ -1,0 +1,36 @@
+.section { margin-top: 58px; }
+.header { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 22px; }
+.header h2 { margin: 10px 0; font-size: clamp(28px, 4vw, 40px); line-height: 1; letter-spacing: -.045em; }
+.header p { max-width: 650px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.list { display: grid; gap: 16px; }
+.card { padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
+.cardHeader { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.cardHeader h3 { margin: 0 0 5px; font-size: 22px; letter-spacing: -.035em; }
+.cardHeader a, .links a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.cardHeader p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.pending { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--line); background: #f2efe7; border-radius: 999px; color: #655b40; text-transform: uppercase; letter-spacing: .06em; font: 500 9px 'DM Mono', monospace; }
+.details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; padding: 16px; border-radius: 14px; background: #f2efe7; }
+.details div { min-width: 0; display: grid; gap: 5px; }
+.details span { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font: 500 9px 'DM Mono', monospace; }
+.details strong { overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+.description { color: var(--muted); font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+.tagList { display: flex; gap: 7px; flex-wrap: wrap; margin: 14px 0; }
+.tagList span { padding: 7px 9px; border: 1px solid var(--line); border-radius: 999px; background: #fffdf8; font-size: 11px; }
+.links { display: grid; justify-items: start; gap: 8px; margin: 12px 0; font-size: 12px; }
+.noteLabel { display: grid; gap: 7px; margin-top: 20px; font-size: 12px; font-weight: 600; }
+.noteLabel textarea { width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fffdf8; color: var(--ink); font: inherit; font-weight: 400; }
+.actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.empty { padding: 32px; background: var(--surface); border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); }
+.empty strong { display: block; margin-bottom: 8px; color: var(--ink); font-size: 19px; }
+.empty p { margin: 0; font-size: 13px; line-height: 1.55; }
+.success, .error { margin: 14px 0; padding: 12px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+.success { color: #36520c; background: #f4fbe8; border: 1px solid #c9ddb0; }
+.error { color: #8a3027; background: #fff2ef; border: 1px solid #e0b7b0; }
+@media (max-width: 650px) {
+  .header { align-items: stretch; flex-direction: column; }
+  .card { padding: 18px; }
+  .cardHeader { flex-direction: column; }
+  .details { grid-template-columns: 1fr; }
+  .actions { flex-direction: column; }
+  .actions button { width: 100%; }
+}

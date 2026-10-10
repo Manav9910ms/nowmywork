@@ -4,14 +4,11 @@
 
 NowMyWork is a freelance marketplace built around private matching instead of proposal and bidding wars.
 
-## Marketplace loop
+## Current marketplace mode
 
-1. A client posts a project with requirements, budget, duration, optional deadline and priority.
-2. NowMyWork filters freelancers by mandatory skills and availability, then scores eligible candidates.
-3. The configurable top N matches receive private offers and in-app notifications.
-4. A freelancer accepts or declines. Assignment is decided server-side with an atomic Firestore transaction.
-5. The assigned client and freelancer get a project workspace with status, payment and project-specific messaging.
-6. Client platform-fee payments are verified through Razorpay and reflected through both immediate API verification and webhook events.
+The existing matching engine and its client-side results UI have been removed while the matching experience is redesigned. The legacy `POST /api/matching` endpoint now returns HTTP 410 (`MATCHING_PAUSED`) and does not create new offers. Client job creation and existing assigned project records are preserved.
+
+Freelancer accounts now go through an application and manual approval process before they can use freelancer features. The approval request is created as soon as the main profile form is submitted; the introduction video is sent separately to `team@nowmywork.com` and is not required for the request to appear in the admin queue.
 
 ## Current stack
 
@@ -21,7 +18,7 @@ NowMyWork is a freelance marketplace built around private matching instead of pr
 - Firebase Admin SDK for trusted server-side operations
 - Firestore Security Rules
 - Zod runtime validation
-- Rule-based, AI-ready matching engine
+- Freelancer matching (currently disabled while the matching experience is redesigned)
 - Razorpay Live Mode client-fee payment flow
 - Vercel deployment
 
@@ -31,35 +28,41 @@ The repository remains a modular monolith. Matching is isolated so a future rule
 
 - Email/password signup and sign-in
 - Google sign-in
-- Client/freelancer role selection at signup
+- Client/freelancer role selection at signup; a saved account role cannot be switched
 - Email verification on email signup
 - Password reset flow
 - Persistent Firebase browser session
 - Server-side Firebase ID-token verification
 - Server-side role validation
+- Freelancer onboarding, admin approval queue and approval-gated freelancer APIs
+
+## Freelancer onboarding and approval
+
+After signup, a freelancer is sent to the required application form instead of the dashboard. The form collects full name, account email, mobile number, date of birth, optional profile URL, description, skills, professional role/title, optional project/work links, and experience.
+
+Submitting the form creates a `freelancerApprovalRequests/{uid}` record immediately with `PENDING` status. The next screen asks the applicant to email an approximately two-minute introduction/work-experience video to `team@nowmywork.com`; the video is collected outside the site and does not gate creation of the admin approval request. Applicants are told that the team will review applications within 3 days.
+
+Admins review pending applications in the dashboard and can approve or reject them with an optional review note. The admin-only request record is the authoritative approval source. Freelancer APIs reject unapproved accounts, and the dashboard redirects pending/rejected accounts back to onboarding. Rejected applicants can update and resubmit their application.
 
 ## Client
 
 - Protected server-side job creation
 - Budget, duration, optional deadline, required skills, tech stack and priority
 - Client dashboard with project list
-- Secure matching trigger
 - Project workspace and status workflow
+- Matching controls are hidden and automatic matching is paused during redesign
 
 ## Freelancer
 
 - Protected profile API
 - Skills, tech stack, rate, experience, portfolio URL and availability
-- Private opportunity list
-- Secure accept/decline API
-- Atomic assignment
+- Private opportunity list and secure accept/decline API are available only after admin approval
+- Atomic assignment for existing/newly reintroduced offers
 - Availability is switched to BUSY when assigned and restored to AVAILABLE on terminal completion/cancellation
 
-## Matching
+## Matching engine status
 
-Required skills are hard eligibility requirements. BUSY and unknown availability states are excluded. Scores are normalized to 0–100 and include reasons such as skill fit, tech fit, availability, experience, budget compatibility and reliability signals.
-
-The candidate limit is configured with `MATCH_CANDIDATE_LIMIT` and defaults to 10. Rematching safely supersedes stale pending offers that are no longer in the selected set.
+Automated scoring, the manual “find matches” action, and the prior matching results UI are intentionally removed for redesign. No newly created project automatically creates freelancer offers. Existing jobs and offers remain stored, but the matching engine must be rebuilt and reviewed before private matching is re-enabled.
 
 ## Project lifecycle
 
@@ -175,7 +178,7 @@ The public site includes metadata, sitemap and robots configuration. Authenticat
 
 GitHub Actions runs dependency installation, TypeScript checking, unit tests and the production build on pushes and pull requests targeting `main`.
 
-Current unit coverage includes job state transitions, matching rules and Razorpay Live-key enforcement.
+Current unit coverage includes job state transitions, freelancer application validation and Razorpay Live-key enforcement. The removed matching scorer no longer has active code or tests.
 
 ## Production status
 

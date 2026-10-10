@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/admin';
-import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
+import { requireUser, assertFreelancerApproved, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +13,7 @@ function isoDate(value: unknown) {
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    assertRole(user.role, 'FREELANCER');
+    await assertFreelancerApproved(user);
     const snapshot = await adminDb().collection('offers').where('freelancerId', '==', user.uid).limit(100).get();
     const offers = snapshot.docs.map((item) => {
       const data = item.data();
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    assertRole(user.role, 'FREELANCER');
+    await assertFreelancerApproved(user);
     const body = await request.json() as { offerId?: string; action?: 'ACCEPTED' | 'DECLINED' };
     const offerId = body.offerId?.trim();
     if (!offerId || !['ACCEPTED', 'DECLINED'].includes(body.action ?? '')) return NextResponse.json({ error: 'Offer ID and action are required.' }, { status: 400 });

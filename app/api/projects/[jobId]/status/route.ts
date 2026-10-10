@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/admin';
 import { assertTransition } from '@/lib/job-state';
-import { requireUser, errorResponse } from '@/lib/server-auth';
+import { requireUser, assertFreelancerApproved, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ jobId: string }> }) {
   try {
     const user = await requireUser(request);
+    if (user.role === 'FREELANCER') await assertFreelancerApproved(user);
     const { jobId } = await params;
     const body = await request.json() as { status?: string };
     const target = body.status;

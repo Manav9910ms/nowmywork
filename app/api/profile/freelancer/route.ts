@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/admin';
-import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
+import { requireUser, assertFreelancerApproved, errorResponse } from '@/lib/server-auth';
 import { freelancerProfileSchema } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    assertRole(user.role, 'FREELANCER');
+    await assertFreelancerApproved(user);
     const snapshot = await adminDb().collection('freelancers').doc(user.uid).get();
     return NextResponse.json({ profile: snapshot.exists ? snapshot.data() : null });
   } catch (error) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireUser(request);
-    assertRole(user.role, 'FREELANCER');
+    await assertFreelancerApproved(user);
     const parsed = freelancerProfileSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: 'Invalid freelancer profile.', issues: parsed.error.flatten() }, { status: 400 });
 

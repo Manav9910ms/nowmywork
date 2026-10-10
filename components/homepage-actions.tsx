@@ -12,6 +12,7 @@ type Placement = 'hero' | 'cta';
 export default function HomepageActions({ placement }: { placement: Placement }) {
   const [authStatus, setAuthStatus] = useState<'loading' | 'signed-out' | 'signed-in'>('loading');
   const [role, setRole] = useState<AccountRole | null>(null);
+  const [freelancerApprovalStatus, setFreelancerApprovalStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseApp) {
@@ -26,6 +27,7 @@ export default function HomepageActions({ placement }: { placement: Placement })
         const request = ++requestNumber;
         if (!currentUser) {
           setRole(null);
+          setFreelancerApprovalStatus(null);
           setAuthStatus('signed-out');
           return;
         }
@@ -33,6 +35,7 @@ export default function HomepageActions({ placement }: { placement: Placement })
         // Hide guest actions immediately while the saved role is being loaded.
         setAuthStatus('signed-in');
         setRole(null);
+        setFreelancerApprovalStatus(null);
 
         void getDoc(doc(db, 'users', currentUser.uid))
           .then((snapshot) => {
@@ -43,6 +46,7 @@ export default function HomepageActions({ placement }: { placement: Placement })
                 ? savedRole
                 : null,
             );
+            setFreelancerApprovalStatus(typeof snapshot.data()?.freelancerApprovalStatus === 'string' ? snapshot.data()?.freelancerApprovalStatus : null);
           })
           .catch(() => {
             if (request === requestNumber) setRole(null);
@@ -102,9 +106,11 @@ export default function HomepageActions({ placement }: { placement: Placement })
       <div className={containerClass}>
         <Link
           className={placement === 'hero' ? 'primary-btn' : 'primary-btn light'}
-          href="/dashboard"
+          href={freelancerApprovalStatus === 'APPROVED' ? '/dashboard' : '/freelancer/onboarding'}
         >
-          {placement === 'hero' ? 'I want work' : 'View opportunities'} <span>→</span>
+          {freelancerApprovalStatus === 'APPROVED'
+            ? (placement === 'hero' ? 'I want work' : 'View opportunities')
+            : (placement === 'hero' ? 'Complete profile' : 'Application status')} <span>→</span>
         </Link>
       </div>
     );
