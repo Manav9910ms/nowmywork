@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@next/third-parties": "latest",
     "firebase": "latest",
     "firebase-admin": "latest",
     "next": "latest",
