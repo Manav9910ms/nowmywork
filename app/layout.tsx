@@ -1,5 +1,11 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
+
+const googleAnalyticsId =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
+  process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ||
+  'G-NVG3T24XBX';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://nowmywork.com'),
@@ -15,5 +21,22 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>{children}</body>
+      <Script
+        id="google-analytics-loader"
+        src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics-config" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){window.dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${googleAnalyticsId}');
+        `}
+      </Script>
+    </html>
+  );
 }
