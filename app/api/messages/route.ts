@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/admin';
-import { requireUser, errorResponse } from '@/lib/server-auth';
+import { requireUser, assertFreelancerApproved, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +21,7 @@ async function getParticipantJob(jobId: string, uid: string) {
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request);
+    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
     const jobId = new URL(request.url).searchParams.get('jobId')?.trim();
     if (!jobId) return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 });
     await getParticipantJob(jobId, user.uid);
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireUser(request);
+    if (user.role === 'FREELANCER') assertFreelancerApproved(user);
     const body = await request.json() as { jobId?: string; text?: string };
     const jobId = body.jobId?.trim();
     const text = body.text?.trim();
