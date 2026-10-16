@@ -12,7 +12,7 @@
   "dependencies": {
     "@next/third-parties": "latest",
     "firebase": "latest",
-    "firebase-admin": "latest",
+    "firebase-admin": "13.10.0",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
