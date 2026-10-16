@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       // 20 most recently updated matches are returned to the admin UI.
       const snapshot = await collection.get();
       documents = snapshot.docs
-        .map((item) => ({ ...item.data(), id: item.id }))
+        .map((item): FreelancerDocument => ({ ...item.data(), id: item.id }))
         .map((document) => ({ document, publicProfile: toPublicFreelancer(document) }))
         .filter(({ publicProfile }) => searchableText(publicProfile).includes(query))
         .sort((a, b) => toMillis(b.document.updatedAt ?? b.document.submittedAt) - toMillis(a.document.updatedAt ?? a.document.submittedAt))
