@@ -105,7 +105,7 @@ export default function AdminPage() {
           <div className="eyebrow muted">ADMIN ACCESS</div>
           <h1>Admin sign-in required.</h1>
           <p>Sign in with a verified Firebase Authentication email that has been explicitly authorized by NowMyWork.</p>
-          <Link className="primary-btn" href="/signin">Sign in to continue →</Link>
+          <Link className="primary-btn" href="/admin/signin">Sign in to continue →</Link>
         </section>
       )}
 
@@ -131,7 +131,7 @@ export default function AdminPage() {
 
           <section className={styles.metrics} aria-label="Marketplace overview">
             {([
-              ['Users', counts?.users],
+              ['Clients', counts?.users],
               ['Freelancers', counts?.freelancers],
               ['Jobs', counts?.jobs],
               ['Offers', counts?.offers],
