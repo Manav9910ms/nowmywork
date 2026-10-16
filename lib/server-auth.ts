@@ -35,9 +35,10 @@ export async function requireUser(request: NextRequest) {
 }
 
 /**
- * Admin access is based on a Firebase-verified email AND an explicit server-only
- * allowlist. Firestore's user role field is not sufficient to grant admin access.
- * Set ADMIN_EMAILS in Vercel as a comma-separated list of trusted admin emails.
+ * Admin access requires a verified email, Google as the current Firebase sign-in
+ * provider, and an explicit server-only allowlist. Firestore's user role field is
+ * not sufficient to grant admin access. Set ADMIN_EMAILS in Vercel as a
+ * comma-separated list of trusted admin emails.
  */
 export async function requireAdminUser(request: NextRequest) {
   const header = request.headers.get('authorization') ?? '';
