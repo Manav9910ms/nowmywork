@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/admin';
-import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
+import { requireAdminUser, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireUser(request);
-    assertRole(user.role, 'ADMIN');
+    const user = await requireAdminUser(request);
     const db = adminDb();
     const [users, freelancers, jobs, offers] = await Promise.all([
       db.collection('users').count().get(),

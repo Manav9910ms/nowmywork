@@ -36,13 +36,19 @@ The repository remains a modular monolith. Matching is isolated so a future rule
 - Server-side role validation
 - Freelancer onboarding, admin approval queue and approval-gated freelancer APIs
 
+## Dedicated admin access
+
+The admin workspace lives at `/admin`, separate from the client/freelancer dashboard. Both the admin page and each `/api/admin/*` endpoint require the caller's Firebase Authentication ID token to contain `email_verified: true` and the verified email to exactly match an address in the server-only `ADMIN_EMAILS` allowlist (comma-separated, lowercase comparison). A Firestore role value by itself never grants admin access. If the allowlist is missing, admin APIs fail closed.
+
+For Vercel Production, open **Project → Settings → Environment Variables** and add `ADMIN_EMAILS` with only the verified email address(es) trusted to operate the admin workspace, then redeploy. Verify those addresses in Firebase Authentication first. Do not use a `NEXT_PUBLIC_*` variable for this allowlist. Standard clients and freelancers see no admin workspace in `/dashboard`, and the admin API checks are enforced server-side even if someone manually calls the endpoints.
+
 ## Freelancer onboarding and approval
 
 After signup, a freelancer is sent to the required application form instead of the dashboard. The form collects full name, account email, mobile number, date of birth, optional profile URL, description, skills, professional role/title, optional project/work links, and experience.
 
 Submitting the form creates a `freelancerApprovalRequests/{uid}` record immediately with `PENDING` status. The next screen asks the applicant to email an approximately two-minute introduction/work-experience video to `team@nowmywork.com`; the video is collected outside the site and does not gate creation of the admin approval request. Applicants are told that the team will review applications within 3 days.
 
-Admins review pending applications in the dashboard and can approve or reject them with an optional review note. The admin-only request record is the authoritative approval source. Freelancer APIs reject unapproved accounts, and the dashboard redirects pending/rejected accounts back to onboarding. Rejected applicants can update and resubmit their application.
+Admins review pending applications on the dedicated `/admin` page and can approve or reject them with an optional review note. Admin tools are not imported or rendered in the client/freelancer `/dashboard` page. The admin-only request record is the authoritative approval source. Freelancer APIs reject unapproved accounts, and the dashboard redirects pending/rejected accounts back to onboarding. Rejected applicants can update and resubmit their application.
 
 ## Client
 
@@ -102,7 +108,7 @@ For Vercel Production configure the Firebase browser/server variables plus:
 - `RAZORPAY_WEBHOOK_SECRET` — separate secret configured for the Razorpay Live webhook
 - `CLIENT_FEE_PERCENT`
 - `FREELANCER_FEE_PERCENT`
-- `MATCH_CANDIDATE_LIMIT`
+- `ADMIN_EMAILS` — comma-separated list of verified Firebase Authentication emails permitted to access `/admin`
 
 Never commit Firebase private keys or payment secrets.
 
@@ -148,6 +154,7 @@ Razorpay webhook signatures must be calculated from the raw request body. Duplic
 - `users/{uid}` — identity and role
 - `clients/{uid}` — client profile
 - `freelancers/{uid}` — freelancer profile and matching signals
+- `freelancerApprovalRequests/{uid}` — server-managed freelancer approval status and review audit
 - `jobs/{jobId}` — project requirements and lifecycle state
 - `offers/{jobId_freelancerId}` — private opportunities
 - `notifications/{id}` — in-app notifications

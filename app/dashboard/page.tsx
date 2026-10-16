@@ -10,60 +10,11 @@ import { logOut } from '@/lib/auth';
 import ClientDashboard from '@/components/client-dashboard';
 import FreelancerProfile from '@/components/freelancer-profile';
 import FreelancerOffers from '@/components/freelancer-offers';
-import FreelancerOnboarding from '@/components/freelancer-onboarding';
-import AdminFreelancerApprovals from '@/components/admin-freelancer-approvals';
 import NotificationsPanel from '@/components/notifications-panel';
 import styles from './dashboard.module.css';
 
 const brandIcon = 'https://raw.githubusercontent.com/Manav9910ms/nowmywork/main/icon.png';
-type AccountRole = 'CLIENT' | 'FREELANCER' | 'ADMIN';
-type Counts = { users: number; freelancers: number; jobs: number; offers: number };
-
-function AdminOverview({ user }: { user: User }) {
-  const [counts, setCounts] = useState<Counts | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const token = await user.getIdToken();
-        const response = await fetch('/api/admin/overview', {
-          headers: { authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const data = await response.json() as { counts?: Counts; error?: string };
-        if (!response.ok) throw new Error(data.error ?? 'Could not load admin overview.');
-        setCounts(data.counts ?? null);
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : 'Could not load admin overview.');
-      }
-    })();
-  }, [user]);
-
-  return (
-    <section className={styles.shell}>
-      <div className="eyebrow muted">ADMIN WORKSPACE</div>
-      <h1 className={styles.heading}>Marketplace control room.</h1>
-      <p className={styles.sub}>Review freelancer applications and manage the marketplace.</p>
-      {error && <div className={styles.notificationEmpty} role="alert">{error}</div>}
-      <div className={styles.grid}>
-        {([
-          ['Users', counts?.users],
-          ['Freelancers', counts?.freelancers],
-          ['Jobs', counts?.jobs],
-          ['Offers', counts?.offers],
-        ] as const).map(([label, value], index) => (
-          <article className={styles.tile} key={label}>
-            <span>0{index + 1}</span>
-            <h2>{value ?? '—'}</h2>
-            <p>{label}</p>
-          </article>
-        ))}
-      </div>
-      <AdminFreelancerApprovals user={user} />
-    </section>
-  );
-}
+type AccountRole = 'CLIENT' | 'FREELANCER';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -72,49 +23,69 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true);
   const [roleError, setRoleError] = useState('');
 
-  useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
-    setUser(currentUser);
-    if (!currentUser) {
-      setRole(null);
-      setChecking(false);
-      return;
-    }
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!active) return;
+      setUser(currentUser);
 
-    try {
-      const snapshot = await getDoc(doc(db, 'users', currentUser.uid));
-      const data = snapshot.data();
-      const savedRole = data?.role;
-      if (savedRole !== 'CLIENT' && savedRole !== 'FREELANCER' && savedRole !== 'ADMIN') {
-        setRoleError('We could not verify your account role. Please sign out and sign in again.');
+      if (!currentUser) {
         setRole(null);
         setChecking(false);
         return;
       }
 
-      if (savedRole === 'FREELANCER') {
-        const token = await currentUser.getIdToken();
-        const applicationResponse = await fetch('/api/profile/freelancer/application', {
-          headers: { authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const application = await applicationResponse.json() as { status?: string; error?: string };
-        if (!applicationResponse.ok) throw new Error(application.error ?? 'Could not verify your freelancer approval.');
-        if (application.status !== 'APPROVED') {
-          // The server reads approval from the admin-only request record.
-          router.replace('/freelancer/onboarding');
+      setChecking(true);
+      try {
+        const snapshot = await getDoc(doc(db, 'users', currentUser.uid));
+        if (!active) return;
+        const data = snapshot.data();
+        const savedRole = data?.role;
+
+        // Admin workspaces are served only from /admin, never from this dashboard.
+        if (savedRole === 'ADMIN') {
+          router.replace('/admin');
           return;
         }
-      }
 
-      setRoleError('');
-      setRole(savedRole);
-      setChecking(false);
-    } catch {
-      setRole(null);
-      setRoleError('We could not verify your account role. Please refresh or sign in again.');
-      setChecking(false);
-    }
-  }), [router]);
+        if (savedRole !== 'CLIENT' && savedRole !== 'FREELANCER') {
+          setRoleError('We could not verify your account role. Please sign out and sign in again.');
+          setRole(null);
+          setChecking(false);
+          return;
+        }
+
+        if (savedRole === 'FREELANCER') {
+          const token = await currentUser.getIdToken();
+          const applicationResponse = await fetch('/api/profile/freelancer/application', {
+            headers: { authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          });
+          const application = await applicationResponse.json() as { status?: string; error?: string };
+          if (!applicationResponse.ok) throw new Error(application.error ?? 'Could not verify your freelancer approval.');
+          if (!active) return;
+          if (application.status !== 'APPROVED') {
+            router.replace('/freelancer/onboarding');
+            return;
+          }
+        }
+
+        setRoleError('');
+        setRole(savedRole);
+        setChecking(false);
+      } catch (reason) {
+        if (!active) return;
+        setRole(null);
+        setRoleError(reason instanceof Error ? reason.message : 'We could not verify your account role. Please refresh or sign in again.');
+        setChecking(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [router]);
 
   async function logout() {
     await logOut();
@@ -162,9 +133,7 @@ export default function DashboardPage() {
       </header>
       {role === 'CLIENT'
         ? <ClientDashboard user={user}/>
-        : role === 'FREELANCER'
-          ? <><FreelancerProfile user={user}/><FreelancerOffers freelancerId={user.uid}/></>
-          : <AdminOverview user={user}/>}
+        : <><FreelancerProfile user={user}/><FreelancerOffers freelancerId={user.uid}/></>}
     </main>
   );
 }

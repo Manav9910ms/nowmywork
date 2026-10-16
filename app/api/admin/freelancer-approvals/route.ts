@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/admin';
-import { requireUser, assertRole, errorResponse } from '@/lib/server-auth';
+import { requireAdminUser, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -15,8 +15,7 @@ function toIso(value: unknown) {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireUser(request);
-    assertRole(user.role, 'ADMIN');
+    const user = await requireAdminUser(request);
     const db = adminDb();
     const snapshot = await db.collection('freelancerApprovalRequests').where('status', '==', 'PENDING').limit(100).get();
     const requests = await Promise.all(snapshot.docs.map(async (item) => {
@@ -51,8 +50,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await requireUser(request);
-    assertRole(user.role, 'ADMIN');
+    const user = await requireAdminUser(request);
     const body = await request.json() as { freelancerId?: string; action?: string; note?: string };
     const freelancerId = body.freelancerId?.trim();
     if (!freelancerId || !['APPROVE', 'REJECT'].includes(body.action ?? '')) {
