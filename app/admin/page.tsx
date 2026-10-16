@@ -96,7 +96,7 @@ export default function AdminPage() {
         <section className={styles.gate} aria-live="polite">
           <div className="eyebrow muted">ADMIN ACCESS</div>
           <h1>Verifying your account.</h1>
-          <p>Checking your Firebase email verification and admin authorization.</p>
+          <p>Checking Google sign-in, email verification, and admin authorization.</p>
         </section>
       )}
 
@@ -104,7 +104,7 @@ export default function AdminPage() {
         <section className={styles.gate}>
           <div className="eyebrow muted">ADMIN ACCESS</div>
           <h1>Admin sign-in required.</h1>
-          <p>Sign in with a verified Firebase Authentication email that has been explicitly authorized by NowMyWork.</p>
+          <p>Continue with Google using a verified email explicitly authorized for NowMyWork administration.</p>
           <Link className="primary-btn" href="/admin/signin">Sign in to continue →</Link>
         </section>
       )}
@@ -113,7 +113,7 @@ export default function AdminPage() {
         <section className={styles.gate}>
           <div className="eyebrow muted">ACCESS DENIED</div>
           <h1>This account cannot access the admin panel.</h1>
-          <p>{message || 'Use an email address that is verified in Firebase Authentication and listed in the server-only ADMIN_EMAILS allowlist.'}</p>
+          <p>{message || 'Use Google sign-in with an email verified in Firebase Authentication and listed in the server-only ADMIN_EMAILS allowlist.'}</p>
           <div className={styles.actions}>
             <button className="primary-btn" type="button" onClick={() => void signOut()}>Sign out and switch account</button>
             <Link className="secondary-btn" href="/">Back to homepage</Link>
