@@ -144,6 +144,10 @@ export default function AdminPage() {
             ))}
           </section>
 
+          <div className={styles.directoryActions}>
+            <Link href="/admin/freelancers" className="secondary-btn">All freelancers →</Link>
+          </div>
+
           <AdminFreelancerApprovals user={user} />
         </div>
       )}
