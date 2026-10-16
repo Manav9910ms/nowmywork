@@ -60,7 +60,8 @@ export default function AdminFreelancersPage() {
       const token = await account.getIdToken();
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
-      const endpoint = '/api/admin/freelancers' + (params.size ? '?' + params.toString() : '');
+      const encodedParams = params.toString();
+      const endpoint = '/api/admin/freelancers' + (encodedParams ? '?' + encodedParams : '');
       const response = await fetch(endpoint, {
         headers: { authorization: 'Bearer ' + token },
         cache: 'no-store',
