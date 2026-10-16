@@ -131,7 +131,7 @@ export default function AdminPage() {
 
           <section className={styles.metrics} aria-label="Marketplace overview">
             {([
-              ['Users', counts?.users],
+              ['Clients', counts?.users],
               ['Freelancers', counts?.freelancers],
               ['Jobs', counts?.jobs],
               ['Offers', counts?.offers],
