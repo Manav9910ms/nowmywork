@@ -1,0 +1,57 @@
+.page { min-height: 100vh; padding: 0 24px 72px; background: var(--paper); color: var(--ink); }
+.nav { max-width: 1240px; margin: 0 auto; min-height: 86px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+.navActions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+.secure { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 500 10px 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
+.secure > span { color: #9bdc00; font-size: 12px; }
+.content { max-width: 1240px; margin: 0 auto; padding-top: 44px; }
+.backLink { display: inline-block; color: var(--muted); font-size: 13px; text-decoration: none; margin-bottom: 26px; }
+.backLink:hover { color: var(--ink); }
+.intro { max-width: 840px; }
+.intro h1, .gate h1 { margin: 12px 0 14px; font-size: clamp(38px, 5vw, 64px); font-weight: 650; letter-spacing: -.055em; line-height: .98; }
+.intro p, .gate p { color: var(--muted); font-size: 15px; line-height: 1.7; max-width: 740px; }
+.searchForm { margin-top: 34px; padding: 22px; max-width: 900px; border: 1px solid var(--line); background: var(--surface); border-radius: 18px; }
+.searchLabel { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 650; }
+.searchRow { display: flex; gap: 10px; align-items: stretch; }
+.searchRow input { min-width: 0; flex: 1; height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; outline: none; }
+.searchRow input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgb(15 15 15 / 6%); }
+.searchHint { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.resultsHeader { margin: 34px 0 16px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.resultsHeader h2 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.04em; }
+.resultsHeader p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.resultCount { flex: 0 0 auto; color: var(--muted); font: 500 11px 'DM Mono', monospace; text-transform: uppercase; }
+.list { display: grid; gap: 14px; }
+.card { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.cardTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.cardTop h3 { margin: 0 0 6px; font-size: 22px; letter-spacing: -.035em; }
+.cardTop a, .profileLink a { color: var(--ink); font-size: 13px; text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.roleTitle { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+.status { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; color: var(--muted); background: var(--paper); font-size: 11px; text-transform: capitalize; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; margin: 16px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink); }
+.skills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.skills span { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; color: var(--muted); font-size: 11px; }
+.profileLink { margin-top: 16px; }
+.empty, .gate { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 28px; color: var(--muted); }
+.empty strong { display: block; margin-bottom: 8px; color: var(--ink); font-size: 18px; }
+.empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+.error { border: 1px solid #e4b3a8; background: #fff3f0; color: #842d1b; border-radius: 12px; padding: 13px 15px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
+.gate { max-width: 760px; margin: 100px auto; padding: 36px; }
+.gate > a { margin-top: 14px; display: inline-flex; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.muted { color: var(--muted); }
+@media (max-width: 760px) {
+  .page { padding: 0 16px 48px; }
+  .nav { min-height: 72px; flex-wrap: wrap; padding: 12px 0; }
+  .navActions { width: 100%; justify-content: space-between; gap: 8px; }
+  .secure { display: none; }
+  .content { padding-top: 30px; }
+  .searchForm { padding: 16px; }
+  .searchRow { flex-wrap: wrap; }
+  .searchRow input { flex-basis: 100%; }
+  .searchRow button { flex: 1; }
+  .resultsHeader { align-items: flex-start; }
+  .card { padding: 18px; }
+  .cardTop { flex-direction: column; }
+  .status { align-self: flex-start; }
+  .gate { margin: 48px auto; padding: 24px; }
+}
