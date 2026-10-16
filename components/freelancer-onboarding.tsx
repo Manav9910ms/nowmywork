@@ -198,7 +198,7 @@ export default function FreelancerOnboarding() {
           <div>
             <div className="eyebrow muted">FREELANCER APPLICATION</div>
             <h1 className={styles.heading}>Your profile is submitted.</h1>
-            <p className={styles.sub}>Your approval request is already in the admin review queue. Now, please email an approximately 2-minute introduction video to team@nowmywork.com. Introduce yourself, describe your skills and work experience, and show one or two projects. You may show your face or record a faceless screen/voice walkthrough.</p>
+            <p className={styles.sub}>Your approval request is already in the admin review queue. Now, please email an approximately 2-minute introduction video to team@nowmywork.com.</p>
           </div>
           <span className={styles.profileBadge}>Awaiting review</span>
         </div>
