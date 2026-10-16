@@ -105,7 +105,7 @@ export default function AdminPage() {
           <div className="eyebrow muted">ADMIN ACCESS</div>
           <h1>Admin sign-in required.</h1>
           <p>Sign in with a verified Firebase Authentication email that has been explicitly authorized by NowMyWork.</p>
-          <Link className="primary-btn" href="/signin">Sign in to continue →</Link>
+          <Link className="primary-btn" href="/admin/signin">Sign in to continue →</Link>
         </section>
       )}
 
