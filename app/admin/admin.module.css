@@ -15,6 +15,7 @@
 .metric > span { color: var(--muted); font: 500 10px 'DM Mono', monospace; }
 .metric h2 { margin: 16px 0 5px; font-size: clamp(28px, 3vw, 42px); letter-spacing: -.05em; }
 .metric p { margin: 0; color: var(--muted); font-size: 12px; }
+.directoryActions { display: flex; justify-content: flex-end; margin-top: 16px; }
 @media (max-width: 760px) {
   .page { padding: 0 16px 48px; }
   .nav { min-height: 72px; flex-wrap: wrap; padding: 12px 0; }
