@@ -4,7 +4,7 @@ import { requireAdminUser, errorResponse } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
-type FreelancerDocument = FirebaseFirestore.DocumentData & { id: string };
+type FreelancerDocument = Record<string, unknown> & { id: string };
 
 function toMillis(value: unknown): number {
   if (value && typeof (value as { toDate?: unknown }).toDate === 'function') {
